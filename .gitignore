@@ -1,0 +1,13 @@
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+venv
+/venv
+/idea
+/.idea/
+__pycache__/
+/.idea/*
+.env
+bot_logs.log
