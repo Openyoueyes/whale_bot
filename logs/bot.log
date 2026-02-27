@@ -1,0 +1,538 @@
+[2025-12-08 12:39:18,137] [INFO] __main__: Инициализация бота...
+[2025-12-08 12:39:18,149] [INFO] __main__: Запускаем polling...
+[2025-12-08 12:39:18,588] [INFO] __main__: Бот запущен. Логин: @sniper_club_manager_bot, id=8357172832
+[2025-12-08 12:39:18,589] [INFO] aiogram.dispatcher: Start polling
+[2025-12-08 12:39:18,678] [INFO] aiogram.dispatcher: Run polling for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 12:39:25,112] [INFO] aiogram.event: Update id=268036859 is handled. Duration 341 ms by bot id=8357172832
+[2025-12-08 12:39:28,886] [INFO] aiogram.event: Update id=268036860 is handled. Duration 128 ms by bot id=8357172832
+[2025-12-08 12:47:45,276] [INFO] aiogram.event: Update id=268036861 is handled. Duration 317 ms by bot id=8357172832
+[2025-12-08 12:57:43,704] [WARNING] aiogram.dispatcher: Received SIGINT signal
+[2025-12-08 12:57:43,706] [INFO] aiogram.dispatcher: Polling stopped for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 12:57:43,707] [INFO] aiogram.dispatcher: Polling stopped
+[2025-12-08 12:57:43,707] [INFO] __main__: Бот остановлен.
+[2025-12-08 12:57:46,129] [INFO] __main__: Инициализация бота...
+[2025-12-08 12:57:46,141] [INFO] __main__: Запускаем polling...
+[2025-12-08 12:57:46,496] [INFO] __main__: Бот запущен. Логин: @sniper_club_manager_bot, id=8357172832
+[2025-12-08 12:57:46,497] [INFO] aiogram.dispatcher: Start polling
+[2025-12-08 12:57:46,585] [INFO] aiogram.dispatcher: Run polling for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 12:58:02,054] [INFO] aiogram.event: Update id=268036862 is handled. Duration 442 ms by bot id=8357172832
+[2025-12-08 12:58:48,826] [WARNING] aiogram.dispatcher: Received SIGINT signal
+[2025-12-08 12:58:48,828] [INFO] aiogram.dispatcher: Polling stopped for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 12:58:48,829] [INFO] aiogram.dispatcher: Polling stopped
+[2025-12-08 12:58:48,829] [INFO] __main__: Бот остановлен.
+[2025-12-08 12:58:50,710] [INFO] __main__: Инициализация бота...
+[2025-12-08 12:58:50,722] [INFO] __main__: Запускаем polling...
+[2025-12-08 12:58:51,076] [INFO] __main__: Бот запущен. Логин: @sniper_club_manager_bot, id=8357172832
+[2025-12-08 12:58:51,077] [INFO] aiogram.dispatcher: Start polling
+[2025-12-08 12:58:51,166] [INFO] aiogram.dispatcher: Run polling for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 12:58:54,118] [INFO] aiogram.event: Update id=268036863 is not handled. Duration 396 ms by bot id=8357172832
+[2025-12-08 12:58:54,118] [ERROR] aiogram.event: Cause exception while process update id=268036863 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 12:59:07,866] [INFO] aiogram.event: Update id=268036864 is handled. Duration 182 ms by bot id=8357172832
+[2025-12-08 12:59:14,678] [INFO] aiogram.event: Update id=268036865 is handled. Duration 205 ms by bot id=8357172832
+[2025-12-08 12:59:15,852] [INFO] aiogram.event: Update id=268036866 is handled. Duration 124 ms by bot id=8357172832
+[2025-12-08 12:59:17,471] [INFO] aiogram.event: Update id=268036867 is handled. Duration 139 ms by bot id=8357172832
+[2025-12-08 13:00:50,320] [WARNING] aiogram.dispatcher: Received SIGINT signal
+[2025-12-08 13:00:50,322] [INFO] aiogram.dispatcher: Polling stopped for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 13:00:50,323] [INFO] aiogram.dispatcher: Polling stopped
+[2025-12-08 13:00:50,323] [INFO] __main__: Бот остановлен.
+[2025-12-08 13:00:52,610] [INFO] __main__: Инициализация бота...
+[2025-12-08 13:00:52,622] [INFO] __main__: Запускаем polling...
+[2025-12-08 13:00:52,905] [INFO] __main__: Бот запущен. Логин: @sniper_club_manager_bot, id=8357172832
+[2025-12-08 13:00:52,906] [INFO] aiogram.dispatcher: Start polling
+[2025-12-08 13:00:53,004] [INFO] aiogram.dispatcher: Run polling for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 13:00:58,973] [INFO] aiogram.event: Update id=268036868 is not handled. Duration 418 ms by bot id=8357172832
+[2025-12-08 13:00:58,973] [ERROR] aiogram.event: Cause exception while process update id=268036868 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:01:37,276] [INFO] aiogram.event: Update id=268036869 is not handled. Duration 406 ms by bot id=8357172832
+[2025-12-08 13:01:37,276] [ERROR] aiogram.event: Cause exception while process update id=268036869 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:07:06,524] [INFO] aiogram.event: Update id=268036870 is not handled. Duration 521 ms by bot id=8357172832
+[2025-12-08 13:07:06,526] [ERROR] aiogram.event: Cause exception while process update id=268036870 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:09:11,570] [INFO] aiogram.event: Update id=268036871 is not handled. Duration 399 ms by bot id=8357172832
+[2025-12-08 13:09:11,572] [ERROR] aiogram.event: Cause exception while process update id=268036871 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:09:18,324] [INFO] aiogram.event: Update id=268036872 is not handled. Duration 218 ms by bot id=8357172832
+[2025-12-08 13:09:18,325] [ERROR] aiogram.event: Cause exception while process update id=268036872 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:09:26,822] [INFO] aiogram.event: Update id=268036873 is not handled. Duration 219 ms by bot id=8357172832
+[2025-12-08 13:09:26,824] [ERROR] aiogram.event: Cause exception while process update id=268036873 by bot id=8357172832
+TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+Traceback (most recent call last):
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+    response = await self.feed_update(bot, update, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+    response = await self.update.wrap_outer_middleware(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+    return await handler(event, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+    return await self._propagate_event(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+    response = await observer.trigger(event, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+    return await wrapped_inner(event, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+    return await wrapped()
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/sniper_bot/sniper_bot/app/bot/routers/client/base.py", line 27, in cmd_start
+    await message.answer(
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/methods/base.py", line 84, in emit
+    return await bot(self)
+           ^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/bot.py", line 485, in __call__
+    return await self.session(self, method, timeout=request_timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 254, in __call__
+    return cast(TelegramType, await middleware(bot, method))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/aiohttp.py", line 185, in make_request
+    response = self.check_response(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ilaglotov/Desktop/sniper_bot/venv/lib/python3.11/site-packages/aiogram/client/session/base.py", line 120, in check_response
+    raise TelegramBadRequest(method=method, message=description)
+aiogram.exceptions.TelegramBadRequest: Telegram server says - Bad Request: message text is empty
+[2025-12-08 13:12:38,062] [WARNING] aiogram.dispatcher: Received SIGINT signal
+[2025-12-08 13:12:38,064] [INFO] aiogram.dispatcher: Polling stopped for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 13:12:38,065] [INFO] aiogram.dispatcher: Polling stopped
+[2025-12-08 13:12:38,065] [INFO] __main__: Бот остановлен.
+[2025-12-08 13:12:39,991] [INFO] __main__: Инициализация бота...
+[2025-12-08 13:12:40,004] [INFO] __main__: Запускаем polling...
+[2025-12-08 13:12:40,363] [INFO] __main__: Бот запущен. Логин: @sniper_club_manager_bot, id=8357172832
+[2025-12-08 13:12:40,364] [INFO] aiogram.dispatcher: Start polling
+[2025-12-08 13:12:40,451] [INFO] aiogram.dispatcher: Run polling for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 13:13:01,012] [INFO] aiogram.event: Update id=268036874 is handled. Duration 571 ms by bot id=8357172832
+[2025-12-08 13:51:59,399] [INFO] aiogram.event: Update id=268036875 is not handled. Duration 2 ms by bot id=8357172832
+[2025-12-08 14:27:25,524] [WARNING] aiogram.dispatcher: Received SIGINT signal
+[2025-12-08 14:27:25,526] [INFO] aiogram.dispatcher: Polling stopped for bot @sniper_club_manager_bot id=8357172832 - 'Sniper Club'
+[2025-12-08 14:27:25,526] [INFO] aiogram.dispatcher: Polling stopped
+[2025-12-08 14:27:25,526] [INFO] __main__: Бот остановлен.
