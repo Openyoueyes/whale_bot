@@ -1,4 +1,4 @@
-# app/bot/routers/client/prem.py
+# app/bot/routers/client/quiz.py
 from __future__ import annotations
 
 import html
@@ -12,7 +12,7 @@ from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy import select, func
 
 from app.db.session import async_session_maker
-from app.db.models import QuizSession, QuizAnswer
+from app.db.models import QuizSession, QuizAnswer, TGUser
 from app.bot.keyboards.quiz import (
     get_quiz_answer_inline_kb,
     get_quiz_start_inline_kb,
@@ -69,11 +69,12 @@ QUIZ: list[QuizQuestion] = [
         ],
     ),
     QuizQuestion(
-        key="style",
-        title="4️⃣ Какой формат вам ближе?",
+        key="money",
+        title="4️⃣ Какой доход в месяц для вас приемлемый?",
         options=[
-            ("🎯 Контроль вручную", "manual"),
-            ("⚙️ Автоматическая система", "robot"),
+            ("✅ 100–300$", "100-300"),
+            ("✅ 300–1000$", "300-1000"),
+            ("✅ 1000$+", "1000+"),
         ],
     ),
     QuizQuestion(
@@ -88,28 +89,86 @@ QUIZ: list[QuizQuestion] = [
 
 
 # ============================================================
+# PRESENTATION HELPERS
+# ============================================================
+
+def _pretty_answer_label(key: str) -> str:
+    mapping = {
+        "goal": "Цель",
+        "time": "Время в день",
+        "experience": "Опыт",
+        "money": "Желаемый доход",
+        "discipline": "Дисциплина",
+    }
+    return mapping.get(key, key)
+
+
+def _pretty_answer_value(key: str, value: str) -> str:
+    # Можно расширять при необходимости
+    if key == "goal":
+        return {"fast": "Запустить готовый алгоритм", "learn": "Научиться торговать самому"}.get(value, value)
+    if key == "time":
+        return {"10": "10–20 минут", "30": "30–60 минут", "60": "1–2 часа", "120": "2+ часа"}.get(value, value)
+    if key == "experience":
+        return {"0": "Не торговал(а)", "1": "До 3 месяцев", "2": "3–12 месяцев", "3": "Более 1 года"}.get(value, value)
+    if key == "money":
+        return {"100-300": "100–300$", "300-1000": "300–1000$", "1000+": "1000$+"}.get(value, value)
+    if key == "discipline":
+        return {"hard": "Эмоции мешают", "ok": "Работаю по системе"}.get(value, value)
+    return value
+
+
+def _format_answers_for_comment(answers: dict[str, str]) -> str:
+    # Выводим в заданном порядке, чтобы было красиво
+    order = ["goal", "time", "experience", "money", "discipline"]
+    lines: list[str] = []
+    for k in order:
+        if k in answers:
+            lines.append(f"• {_pretty_answer_label(k)}: {_pretty_answer_value(k, answers[k])}")
+    # На случай если появятся новые ключи
+    for k, v in answers.items():
+        if k not in order:
+            lines.append(f"• {_pretty_answer_label(k)}: {_pretty_answer_value(k, v)}")
+    return "\n".join(lines)
+
+
+# ============================================================
 # SCORING
 # ============================================================
 
 def _manual_score(ans: dict[str, str]) -> int:
+    """
+    Условная оценка "готов к ручной торговле".
+    Чем выше — тем больше вероятность, что человеку зайдёт ручной формат.
+    """
     score = 0
 
+    # хочет учиться — плюс в "manual"
     if ans.get("goal") == "learn":
         score += 2
 
+    # больше времени — плюс
     if ans.get("time") in {"60", "120"}:
         score += 2
     elif ans.get("time") == "30":
         score += 1
 
+    # опыт — плюс
     if ans.get("experience") in {"2", "3"}:
         score += 2
     elif ans.get("experience") == "1":
         score += 1
 
-    if ans.get("style") == "manual":
-        score += 2
+    # доход: чем выше ожидания — тем чаще человеку ближе "системность/роботы",
+    # но в реальности бывает наоборот. Дадим небольшой плюс "manual" только за средние ожидания.
+    if ans.get("money") == "300-1000":
+        score += 1
+    elif ans.get("money") == "1000+":
+        score += 0
+    else:  # 100-300
+        score += 1
 
+    # дисциплина — критично для manual
     if ans.get("discipline") == "ok":
         score += 1
 
@@ -135,6 +194,9 @@ async def _reset_quiz(tg_id: int) -> None:
             qs.step = 0
             qs.finished = False
             qs.gift = None
+            qs.phone = None
+            qs.score = None
+            qs.level = None
             qs.updated_at = datetime.utcnow()
 
         await session.execute(
@@ -181,6 +243,27 @@ async def _set_choice(tg_id: int, choice: str) -> None:
             qs.finished = True
             qs.updated_at = datetime.utcnow()
             await session.commit()
+
+
+async def _mark_user_quiz_completed(tg_id: int) -> None:
+    async with async_session_maker() as session:
+        res = await session.execute(select(TGUser).where(TGUser.tg_id == tg_id))
+        user = res.scalar_one_or_none()
+        if user:
+            user.quiz_completed = True
+            user.quiz_completed_at = datetime.utcnow()
+            await session.commit()
+
+
+async def _save_quiz_summary(tg_id: int, *, score: int, level: str) -> None:
+    async with async_session_maker() as session:
+        qs = await session.get(QuizSession, tg_id)
+        if qs:
+            qs.score = score
+            qs.level = level
+            qs.finished = True
+            qs.updated_at = datetime.utcnow()
+        await session.commit()
 
 
 # ============================================================
@@ -239,45 +322,98 @@ async def quiz_answer(callback: CallbackQuery):
 
     step = await _save_answer(tg_id, q_key, value)
 
+    # продолжаем тест
     if step < len(QUIZ):
         await _show_question(callback, step)
         return
 
+    # тест завершён: собираем ответы/скоринг
     answers = await _load_answers_map(tg_id)
+    score = _manual_score(answers)
     rec = _recommendation(answers)
+    level = _rec_title(rec)
 
+    # сохраняем агрегаты
+    await _save_quiz_summary(tg_id, score=score, level=level)
+    await _mark_user_quiz_completed(tg_id)
+
+    # двигаем стадию в bitrix при необходимости
     await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
 
-    # Bitrix log
+    # красивый текст ответов
+    answers_text = _format_answers_for_comment(answers)
+
+    # комментарий в Bitrix (структурировано)
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
         if deal:
             await bitrix_client.add_deal_timeline_comment(
                 deal["ID"],
-                f"🧩 Тест пройден.\nTG_ID: {tg_id}\nРекомендация: {_rec_title(rec)}"
+                (
+                    "🧩 <b>Тест пройден</b>\n"
+                    "--------------------------------\n"
+                    f"TG_ID: {tg_id}\n"
+                    f"Уровень: {level}\n"
+                    f"Score: {score}\n\n"
+                    "<b>Ответы:</b>\n"
+                    f"{answers_text}"
+                ),
             )
     except Exception:
-        pass
+        logger.exception("bitrix comment failed tg_id=%s", tg_id)
 
-    # уведомление в админ/группу
+    # уведомление в группу/админам:
+    # 1) стандартный notify (как у тебя уже заведено)
     try:
         await notify_quiz_completed_no_phone(
             bot=callback.bot,
             tg_id=tg_id,
             username=callback.from_user.username,
             full_name=callback.from_user.full_name,
-            level=_rec_title(rec),
-            score=_manual_score(answers),
+            level=level,
+            score=score,
             gift=None,
         )
     except Exception:
-        pass
+        logger.exception("notify_quiz_completed_no_phone failed tg_id=%s", tg_id)
 
+    # 2) ДОП: полный разбор с ответами — в группу/админам отдельным сообщением
+    # (чтобы твой существующий notify не ломать)
+    try:
+        text_full = (
+            "🧩 <b>Разбор ответов теста</b>\n"
+            "----------------------------------------\n"
+            f"<b>TG ID:</b> <code>{tg_id}</code>\n"
+            f"<b>Username:</b> @{callback.from_user.username or 'нет'}\n"
+            f"<b>Имя:</b> {html.escape(callback.from_user.full_name)}\n\n"
+            f"<b>Уровень:</b> {level}\n"
+            f"<b>Score:</b> {score}\n\n"
+            f"<b>Ответы:</b>\n{answers_text}"
+        )
+        # отправляем админу(ам) — так уже есть в notify, но там без ответов.
+        # Если хочешь только в группу — скажи, уберу админов.
+        from app.config import ADMIN_IDS, GROUP_CHAT_MESSAGES_BOT_ID
+
+        for admin_id in ADMIN_IDS:
+            try:
+                await callback.bot.send_message(admin_id, text_full, parse_mode="HTML", disable_web_page_preview=True)
+            except Exception:
+                pass
+
+        if GROUP_CHAT_MESSAGES_BOT_ID:
+            try:
+                await callback.bot.send_message(GROUP_CHAT_MESSAGES_BOT_ID, text_full, parse_mode="HTML", disable_web_page_preview=True)
+            except Exception:
+                pass
+    except Exception:
+        logger.exception("full quiz breakdown send failed tg_id=%s", tg_id)
+
+    # финальный экран
     await _edit_quiz_message(
         callback,
         text=(
             "✅ <b>Тест завершён!</b>\n\n"
-            f"По результатам вам больше подходит:\n<b>{_rec_title(rec)}</b>\n\n"
+            f"По результатам вам больше подходит:\n<b>{level}</b>\n\n"
             "Выберите направление 👇"
         ),
         reply_markup=get_quiz_choice_inline_kb(recommended=rec),
@@ -290,18 +426,28 @@ async def quiz_choice(callback: CallbackQuery):
     tg_id = callback.from_user.id
     choice = callback.data.split(":")[-1]
 
+    # сохраняем выбор
     await _set_choice(tg_id, choice)
     await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
+
+    # для комментария в Bitrix — красиво
+    choice_map = {
+        "manual": "🧑‍💻 Ручная торговля",
+        "robot": "🤖 Автоматическая торговля (роботы)",
+        "consult": "☎️ Консультация",
+        "session": "🎥 Разбор/сессия",
+    }
+    choice_text = choice_map.get(choice, choice)
 
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
         if deal:
             await bitrix_client.add_deal_timeline_comment(
                 deal["ID"],
-                f"✅ Клиент выбрал формат: {choice}"
+                f"✅ <b>Клиент выбрал направление:</b> {choice_text}",
             )
     except Exception:
-        pass
+        logger.exception("bitrix choice comment failed tg_id=%s", tg_id)
 
     await _edit_quiz_message(
         callback,
