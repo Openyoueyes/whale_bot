@@ -16,6 +16,7 @@ from app.bot.routers.client.manager import router as client_manager_router
 from app.bot.routers.business.dialog import router as business_dialog_router
 from app.bot.routers.admin.triggers import router as admin_triggers_router
 from app.bot.routers.admin.getmedia import router as admin_getmedia_router
+from app.bot.routers.admin.change_manager import router as admin_change_router
 from app.bot.routers.common.cancel_inline import router as common_cancel_inline_router
 from app.bot.routers.admin.help import router as admin_help_router
 from app.bot.routers.client.quiz import router as quiz_router
@@ -31,6 +32,7 @@ def setup_routers(dp: Dispatcher) -> None:
     dp.include_router(admin_triggers_router)
     dp.include_router(admin_getmedia_router)
     dp.include_router(admin_help_router)
+    dp.include_router(admin_change_router)
 
     # Клиентские
     client_base_router.message.middleware(BitrixStageGuardMiddleware())
