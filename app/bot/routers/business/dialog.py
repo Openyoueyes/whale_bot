@@ -1,4 +1,4 @@
-# app/bot/routers/business/dialog.py
+#app/bot/routers/business/dialog.py
 
 from __future__ import annotations
 

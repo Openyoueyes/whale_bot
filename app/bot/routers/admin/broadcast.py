@@ -37,7 +37,7 @@ class BroadcastStates(StatesGroup):
     choosing_pipeline = State()
     choosing_stage = State()
 
-    choosing_button_mode = State()  # ✅ новый шаг: кнопка квиза или нет
+    choosing_button_mode = State()  # ✅ новый шаг: кнопка теста или нет
     entering_message = State()       # одно состояние для любого типа контента
 
 
@@ -55,7 +55,7 @@ def _button_mode_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="✅ Как есть (сохранить кнопки как в сообщении)", callback_data="broadcast_btn:keep")],
-            [InlineKeyboardButton(text="➕ Добавить кнопку квиза", callback_data="broadcast_btn:add_quiz")],
+            [InlineKeyboardButton(text="➕ Добавить кнопку теста", callback_data="broadcast_btn:add_quiz")],
             [InlineKeyboardButton(text="➖ Убрать inline-кнопки", callback_data="broadcast_btn:remove")],
         ]
     )
@@ -64,13 +64,13 @@ def _button_mode_kb() -> InlineKeyboardMarkup:
 async def _ask_button_mode(message_or_callback_message: Message, state: FSMContext) -> None:
     """
     Единый шаг после выбора охвата:
-    спрашиваем режим (кнопка квиза / как есть / убрать).
+    спрашиваем режим (кнопка теста / как есть / убрать).
     """
     await state.set_state(BroadcastStates.choosing_button_mode)
     await message_or_callback_message.answer(
         "Выберите, что делать с кнопками в рассылке:\n\n"
         "✅ Как есть — рассылка 1:1 (кнопки сохранятся если были)\n"
-        "➕ Добавить кнопку квиза — всем поставим кнопку «Пройти тест»\n"
+        "➕ Добавить кнопку теста — всем поставим кнопку «Пройти тест»\n"
         "➖ Убрать — снимем любые inline-кнопки\n\n"
         "Отмена — кнопкой ниже.",
         reply_markup=cancel_inline_kb(),
@@ -329,7 +329,7 @@ async def choose_button_mode(callback: CallbackQuery, state: FSMContext):
     await state.update_data(quiz_button_mode=quiz_button_mode)
     await state.set_state(BroadcastStates.entering_message)
 
-    human = "как есть (сохранить)" if quiz_button_mode is None else ("добавить кнопку квиза" if quiz_button_mode == "add" else "убрать кнопки")
+    human = "как есть (сохранить)" if quiz_button_mode is None else ("добавить кнопку теста" if quiz_button_mode == "add" else "убрать кнопки")
     await callback.message.answer(
         f"Режим кнопок: {human}.\n\n"
         "Теперь отправьте сообщение для рассылки (любой тип: текст/фото/видео/voice/файл и т.д.).\n\n"

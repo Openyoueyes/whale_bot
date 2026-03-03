@@ -15,7 +15,7 @@ from app.config import BITRIX_FIELD_TG_ID_DEAL
 
 bitrix_client = BitrixClient()
 
-BLOCKED_STAGE_ID = "UC_HAYQ51"  # куда переносим, если пользователь заблокировал бота
+BLOCKED_STAGE_ID = "UC_6OBDV3"  # куда переносим, если пользователь заблокировал бота
 
 
 class BroadcastScope(str, Enum):
@@ -131,7 +131,7 @@ async def _move_deal_to_blocked_stage(tg_id: int) -> None:
 # quiz button helpers
 # =========================
 
-def _quiz_start_kb(text: str = "🎯 Пройти тест") -> InlineKeyboardMarkup:
+def _quiz_start_kb(text: str = "🧠 Пройти проф-тест трейдера") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=text, callback_data="quiz:start")]
@@ -150,7 +150,7 @@ async def _apply_quiz_button_mode(
     """
     mode:
       - None: ничего не делаем (оставляем как в оригинале)
-      - "add": ставим клавиатуру с кнопкой квиза (заменяем любую существующую)
+      - "add": ставим клавиатуру с кнопкой теста (заменяем любую существующую)
       - "remove": убираем любую inline-клавиатуру
     """
     if mode is None:
@@ -186,7 +186,7 @@ async def send_message_broadcast(
 
     # None | "add" | "remove"
     quiz_button_mode: QuizButtonMode = None,
-    quiz_button_text: str = "🎯 Пройти тест",
+    quiz_button_text: str = "🧠 Пройти проф-тест трейдера",
 
     # ✅ то, что реально рассылалось (текст/caption + вложения), формируй в admin router
     bitrix_message_body: str | None = None,
@@ -194,12 +194,12 @@ async def send_message_broadcast(
     """
     Универсальная рассылка:
       - копируем сообщение как есть (любой тип)
-      - опционально: добавляем/удаляем inline-кнопку квиза
+      - опционально: добавляем/удаляем inline-кнопку теста
       - в Bitrix сохраняем именно содержимое (bitrix_message_body), а не "тип сообщения"
 
     quiz_button_mode:
       - None     -> оставить как в исходнике (ничего не меняем)
-      - "add"    -> поставить кнопку квиза всем (заменит текущую inline-клавиатуру)
+      - "add"    -> поставить кнопку тест всем (заменит текущую inline-клавиатуру)
       - "remove" -> убрать inline-клавиатуру у всех
     """
     sent = 0
@@ -285,7 +285,7 @@ async def send_message_broadcast(
             if deal_id:
                 comment = (
                     "📢 Групповая рассылка из Telegram бота\n\n"
-                    f"Кнопка квиза: {kb_mode_text}\n"
+                    f"Кнопка теста: {kb_mode_text}\n"
                     "-----------------------------\n"
                     "Текст/содержимое рассылки:\n\n"
                     f"{body_for_bitrix}"

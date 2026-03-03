@@ -1,4 +1,4 @@
-# app/bot/services/team_service.py
+# app/bot/services/prem_service.py
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def _reply_to_client_keyboard(tg_id: int, deal_id: str | None) -> InlineKeyboard
     )
 
 
-async def create_training_request(bot: Bot, tg_user: User, source: str) -> None:
+async def create_prem_request(bot: Bot, tg_user: User, source: str) -> None:
     """
     “Заявка на обучение”:
     - находим сделку по tg_id,
@@ -49,7 +49,7 @@ async def create_training_request(bot: Bot, tg_user: User, source: str) -> None:
         deal_link_text = f'<a href="{deal_link}">Перейти в сделку</a>'
 
         comment = (
-            "Заявка на обучение из Telegram бота\n\n"
+            "Заявка на прем из Telegram бота\n\n"
             f"Источник: {source}\n"
             f"TG ID: {tg_id}\n"
             f"Username: @{username}\n"
@@ -61,7 +61,7 @@ async def create_training_request(bot: Bot, tg_user: User, source: str) -> None:
             pass
 
     notify_text = (
-        "📩 <b>Новая заявка на обучение</b>\n\n"
+        "📩 <b>Новая заявка на прем</b>\n\n"
         f"{deal_link_text}\n\n"
         f"<b>Источник:</b> {source}\n"
         f"<b>TG ID:</b> <code>{tg_id}</code>\n"

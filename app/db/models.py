@@ -45,7 +45,7 @@ class TGUser(Base):
         cascade="all, delete-orphan",
     )
 
-    # ✅ one-to-one на сессию квиза
+    # ✅ one-to-one на сессию теста
     quiz_session: Mapped["QuizSession | None"] = relationship(
         back_populates="user",
         uselist=False,

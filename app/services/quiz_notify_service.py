@@ -15,9 +15,9 @@ bitrix_client = BitrixClient()
 
 def _gift_name(gift: str | None) -> str:
     if gift == "session":
-        return "Онлайн-сессия"
+        return "1"
     if gift == "consult":
-        return "Консультация"
+        return "2"
     return "не выбран"
 
 
@@ -158,7 +158,7 @@ async def notify_quiz_completed_no_phone(
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
-        "🧩 <b>Клиент прошёл квиз</b>\n"
+        "🧩 <b>Клиент прошёл тест</b>\n"
         "----------------------------------------\n"
         f"{deal_link_text}\n"
         "----------------------------------------\n"
@@ -201,7 +201,7 @@ async def notify_quiz_phone_received(
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
-        "📞 <b>Клиент оставил контакт после квиза</b>\n"
+        "📞 <b>Клиент оставил контакт после теста</b>\n"
         "----------------------------------------\n"
         f"{deal_link_text}\n"
         "----------------------------------------\n"

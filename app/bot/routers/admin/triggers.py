@@ -1,8 +1,9 @@
+# app/bot/routers/admin/triggers.py
 from __future__ import annotations
 
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from html import escape as html_escape
@@ -99,7 +100,7 @@ async def triggers_add_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.set_state(TriggerStates.waiting_keyword)
     await callback.message.answer(
-        "Введите <b>ключевое слово</b> (например: <code>снайпер2026</code>).\n"
+        "Введите <b>ключевое слово</b> (например: <code>Советник</code>).\n"
         "Оно будет срабатывать по точному совпадению текста/подписи.",
         parse_mode="HTML",
     )
@@ -200,7 +201,7 @@ async def triggers_delete_hint(callback: CallbackQuery):
     await callback.message.answer(
         "Удаление: отправьте команду\n"
         "<code>/trigger_del ключевое_слово</code>\n"
-        "Пример: <code>/trigger_del снайпер2026</code>",
+        "Пример: <code>/trigger_del Советник</code>",
         parse_mode="HTML",
     )
 

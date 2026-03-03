@@ -16,12 +16,12 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
     """
     keyboard = [
         [
-            KeyboardButton(text="🤖 Роботы"),
-            KeyboardButton(text="💰 Закрытый канал"),
+            KeyboardButton(text="💰 Whale Профит"),
+            KeyboardButton(text="🤖 Торговые роботы"),
         ],
         [
             KeyboardButton(text="🎁 Бонус"),
-            KeyboardButton(text="📊 Тест на трейдера"),
+            KeyboardButton(text="📞 Связь с менеджером"),
         ],
     ]
 

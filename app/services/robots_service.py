@@ -66,7 +66,7 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
     # 3) Комментарий в Bitrix
     if deal_id:
         comment = (
-            "Заявка из Telegram бота (Продукты)\n\n"
+            "Заявка из Telegram бота (Роботы)\n\n"
             f"Источник: {source}\n"
             f"TG ID: {tg_id}\n"
             f"Username: @{username}\n"
@@ -80,7 +80,7 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
 
     # 4) Уведомление админам
     notify_text = (
-        "🆕 <b>Новая заявка (Продукты)</b>\n\n"
+        "🆕 <b>Новая заявка (Роботы)</b>\n\n"
         f"{deal_link_text}\n\n"
         f"<b>Ответственный:</b> {responsible_text}\n"
         f"<b>Источник:</b> {source}\n"

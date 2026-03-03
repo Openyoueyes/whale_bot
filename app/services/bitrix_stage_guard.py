@@ -3,17 +3,18 @@
 from app.integrations.bitrix.client import BitrixClient
 
 BAD_STATUS_IDS = {
+    "NEW",
+    "UC_F3ZLGB",
+    "UC_LX2TD7",
+
     "LOSE",
-    "APOLOGY",
-    "UC_HAYQ51",
-    "UC_NWOJEW",
     "UC_R1NGXP",
-    "UC_OERKGY",
-    "UC_P1RGN3",
-    "UC_G681EV"
+    "UC_OMS9IC",
+
+    "UC_6OBDV3",
 }
 
-FIRST_TOUCH_STATUS_ID = "NEW"  # если у тебя 1 касание = другой статус, поменяй тут
+FIRST_TOUCH_STATUS_ID = "PREPARATION"  # если у тебя 1 касание = другой статус, поменяй тут
 
 
 def _extract_status_id(stage_id: str) -> str:

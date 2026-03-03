@@ -35,30 +35,11 @@ BITRIX_FIELD_TG_LINK_DEAL: str = env.str("BITRIX_FIELD_TG_LINK_DEAL")
 BITRIX_FIELD_TAG_DEAL: str = env.str("BITRIX_FIELD_TAG_DEAL")
 
 # --- VIDEO поля ---
-WELCOME_VIDEO_FILE_ID = env.str("WELCOME_VIDEO_FILE_ID", default="")
-TEAM_ANDREY_VIDEO_FILE_ID = env.str("TEAM_ANDREY_VIDEO_FILE_ID", default="")
-TEAM_ANTON_VIDEO_FILE_ID = env.str("TEAM_ANTON_VIDEO_FILE_ID", default="")
-
-REVIEW_1_VIDEO_FILE_ID = os.getenv("REVIEW_1_VIDEO_FILE_ID", "").strip() or None
-REVIEW_2_VIDEO_FILE_ID = os.getenv("REVIEW_2_VIDEO_FILE_ID", "").strip() or None
-REVIEW_3_VIDEO_FILE_ID = os.getenv("REVIEW_3_VIDEO_FILE_ID", "").strip() or None
-REVIEW_4_VIDEO_FILE_ID = os.getenv("REVIEW_4_VIDEO_FILE_ID", "").strip() or None
-
-ANTON_RESULT_1_URL = env.str("ANTON_RESULT_1_URL", default="")
-ANTON_RESULT_2_URL = env.str("ANTON_RESULT_2_URL", default="")
-
-ANDREY_RESULT_1_URL=env.str("ANDREY_RESULT_1_URL", default="")
-ANDREY_RESULT_2_URL=env.str("ANDREY_RESULT_2_URL", default="")
-ANDREY_RESULT_3_URL=env.str("ANDREY_RESULT_3_URL", default="")
-
-#media
+WELCOME_PHOTO_FILE_ID = env.str("WELCOME_VIDEO_FILE_ID", default="")
+BONUS_IMAGE_FILE_ID = env.str("BONUS_IMAGE_FILE_ID", default="")
 MANAGER_CONTACT_IMAGE_FILE_ID = env.str("MANAGER_CONTACT_IMAGE_FILE_ID", default="")
-TEAM_IMAGE_FILE_ID = env.str("TEAM_IMAGE_FILE_ID", default="")
-RESULTS_IMAGE_FILE_ID = env.str("RESULTS_IMAGE_FILE_ID", default="")
-SNIPER_SAP_IMAGE_FILE_ID = env.str("SNIPER_SAP_IMAGE_FILE_ID", default="")
-INDI_IMAGE_FILE_ID = env.str("INDI_IMAGE_FILE_ID", default="")
-ONLINE_IMAGE_FILE_ID = env.str("ONLINE_IMAGE_FILE_ID", default="")
-PRODUCTS_IMAGE_FILE_ID = env.str("PRODUCTS_IMAGE_FILE_ID", default="")
-
-SNIPER_SAP_VIDEO_FILE_ID = env.str("SAP_VIDEO_FILE_ID", default="")
-REMIND_SUBSCRIBE_VIDEO_FILE_ID: str = env.str("REMIND_SUBSCRIBE_VIDEO_FILE_ID", "")
+PREM_IMAGE_FILE_ID = env.str("PREM_IMAGE_FILE_ID", default="")
+ROBOTS_IMAGE_FILE_ID = env.str("ROBOTS_IMAGE_FILE_ID", default="")
+AI_IMAGE_FILE_ID = env.str("AI_IMAGE_FILE_ID", default="")
+SAFE_IMAGE_FILE_ID = env.str("SAFE_IMAGE_FILE_ID", default="")
+QUANT_IMAGE_FILE_ID = env.str("QUANT_IMAGE_FILE_ID", default="")

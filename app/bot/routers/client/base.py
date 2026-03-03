@@ -11,10 +11,7 @@ from aiogram.types import Message
 
 from app.bot.keyboards.quiz import get_quiz_start_inline_kb
 from app.config import (
-    ADMIN_IDS,
-    WELCOME_VIDEO_FILE_ID,
-    REMIND_SUBSCRIBE_VIDEO_FILE_ID,
-    MAIN_CHANNEL_ID,
+    ADMIN_IDS, MAIN_CHANNEL_ID, WELCOME_PHOTO_FILE_ID
 )
 from app.db.session import async_session_maker
 from app.services.auto_followup_service import mark_activity, mark_start
@@ -35,9 +32,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 MAIN_MENU_TEXTS = {
-    "👥 Команда",
-    "🛍 Продукты",
-    "📊 Результаты",
+    "💰 Whale Профит",
+    "🤖 Торговые роботы",
+    "🎁 Бонус",
     "📞 Связь с менеджером",
 }
 
@@ -89,21 +86,12 @@ async def _send_subscribe_reminder(bot: Bot, chat_id: int, user_id: int, first_n
             "👇 Нажми кнопку ниже, чтобы подписаться:"
         )
 
-        if REMIND_SUBSCRIBE_VIDEO_FILE_ID:
-            # send_video НЕ поддерживает disable_web_page_preview в aiogram 3.22.0
-            await bot.send_video(
-                chat_id=chat_id,
-                video=REMIND_SUBSCRIBE_VIDEO_FILE_ID,
-                caption=caption,
-                reply_markup=get_subscribe_inline_keyboard(),
-            )
-        else:
-            await bot.send_message(
-                chat_id=chat_id,
-                text=caption,
-                reply_markup=get_subscribe_inline_keyboard(),
-                disable_web_page_preview=True,
-            )
+        await bot.send_message(
+            chat_id=chat_id,
+            text=caption,
+            reply_markup=get_subscribe_inline_keyboard(),
+            disable_web_page_preview=True,
+        )
 
     except Exception:
         pass
@@ -157,22 +145,25 @@ async def cmd_start(message: Message, command: CommandObject):
     first_name = _safe_first_name(message)
 
     caption = (
-        f"👋 <b>{first_name}, добро пожаловать в Sniper Club</b> 🎯\n\n"
-        "✅ Мы торгуем в реальном времени: Forex / Фондовый рынок / Крипто.\n"
-        "✅ Обучаем индивидуально стратегии Sniper до результата.\n\n"
-        "❗️Вы можете наблюдать, <b>копировать</b> наши сделки и разбирать логику входов.\n\n"
-        "📌 <b>Определите:</b> свой уровень подготовки за 1 минуту\n"
-        "и заберите <b>бесплатно</b> бонус от нашей команды на выбор:\n\n"
-        "🎁1️⃣<b>День живой торговли с трейдером</b>\n\n"
-        "🎁2️⃣<b>Консультация по рынку/брокерам/стратегии</b>\n\n"
-        "📣 Так же <b>подпишитесь</b> на наш канал там много полезной информации: https://t.me/+XizhoLTcJFBhYzAy\n\n"
+        f"👋 <b>{first_name}, вас приветствует команда WhaleTrade 🐳\n"
+        f"Спасибо за интерес к нашей работе!\n\n"
+        "Мы торгуем на рынке Forex\n"
+        "Ищем партнеров для совместных идей и их реализаций.\n\n"
+        "Два напрвления работы с нами:\n"
+        "1️⃣Готовые точки входа с аналитикой и сопровождением(WhaleTade Профит).\n"
+        "2️⃣Торговые роботы WhaleTrade(статистика с 2022 года).\n\n"
+
+        "<b>Отзывы работы с нами: @WhaleInvestmentTrading</b>"
+        "📌Пройдите <b>короткий проф-тест</b> и определите направление которое подходит именно вам.\n\n"
+
+        "📣 Так же <b>подпишитесь</b> на наш открытый канал там много разборов и полезной информации: https://t.me/+on4x8BSxxv5hZmYy\n\n"
         "👇 Чтобы пройти тест, нажмите кнопку ниже: 👇"
     )
 
     # 1) Видео + текст (caption) + инлайн-кнопка
-    if WELCOME_VIDEO_FILE_ID:
-        await message.answer_video(
-            video=WELCOME_VIDEO_FILE_ID,
+    if WELCOME_PHOTO_FILE_ID:
+        await message.answer_photo(
+            photo=WELCOME_PHOTO_FILE_ID,
             caption=caption,
             reply_markup=get_quiz_start_inline_kb(),
             parse_mode="HTML",
@@ -237,7 +228,7 @@ def _trigger_key_from_message(message: Message) -> str:
     ~F.text.startswith("/"),
     # НЕ пункты главного меню
     ~F.text.in_(MAIN_MENU_TEXTS),
-    # НЕ перехватывать контакты/квиз-флоу
+    # НЕ перехватывать контакты/тест-флоу
     ~F.contact,
 )
 async def any_client_message(message: Message):
