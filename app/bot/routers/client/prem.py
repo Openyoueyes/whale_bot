@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
 
 from app.bot.keyboards.prem import get_prem_list_keyboard
@@ -23,8 +24,8 @@ PREM_LIST_TEXT = (
     "Реакция на внезапные и высокопотенциальные рыночные события.\n\n"
     "📈 <b>Открытые результаты торговли</b>\n"
     "Прозрачная статистика и реальные отчёты без скрытых цифр.\n\n"
-    "💎 <b>Есть возможность бесплатного доступа в Premium-канал.</b>\n"
-    "Нажмите кнопку получить доступ, чтобы узнать подрбнее."
+    "💎 <b>Есть возможность бесплатного доступа в Premium-канал.</b>\n\n"
+    "Нажмите кнопку получить доступ, чтобы узнать подрбности:"
 )
 
 
@@ -63,14 +64,24 @@ async def team_anton_apply(callback: CallbackQuery):
         "Менеджер свяжется с вами в ближайшее время."
     )
 
-    # Если текущее сообщение с видео — меняем caption
-    if callback.message and callback.message.video:
-        await callback.message.edit_caption(
-            caption=confirm_text,
-            parse_mode="HTML",
-        )
-    else:
-        await callback.message.edit_text(
+    if not callback.message:
+        return
+
+    try:
+        # если сообщение с фото или видео — редактируем caption
+        if callback.message.photo or callback.message.video:
+            await callback.message.edit_caption(
+                caption=confirm_text,
+                parse_mode="HTML",
+            )
+        else:
+            await callback.message.edit_text(
+                confirm_text,
+                parse_mode="HTML",
+            )
+    except TelegramBadRequest:
+        # fallback — отправляем новое сообщение
+        await callback.message.answer(
             confirm_text,
             parse_mode="HTML",
         )

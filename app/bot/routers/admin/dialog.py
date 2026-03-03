@@ -23,7 +23,7 @@ router.callback_query.filter(AdminFilter())
 
 bitrix_client = BitrixClient()
 
-MANAGER_PREFIX = "Менеджер Whale trade ответил:\n\n"
+MANAGER_PREFIX = "Менеджер WhaleTrade ответил:\n\n"
 
 
 class AdminDialogStates(StatesGroup):

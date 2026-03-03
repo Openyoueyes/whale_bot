@@ -8,7 +8,7 @@ def get_robot_list_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text="🥇 WT_AI", callback_data="robots:wt_ai")],
             [InlineKeyboardButton(text="🥈 WT_SAFETREND", callback_data="robots:wt_safe")],
-            [InlineKeyboardButton(text="🥉 WT_QUAN", callback_data="robots:wt_quant")],
+            [InlineKeyboardButton(text="🥉 WT_QUANT", callback_data="robots:wt_quant")],
 
         ]
     )
@@ -34,6 +34,6 @@ def get_robot_post_apply_keyboard() -> InlineKeyboardMarkup:
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="products:back")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="robots:back")],
         ]
     )

@@ -145,19 +145,19 @@ async def cmd_start(message: Message, command: CommandObject):
     first_name = _safe_first_name(message)
 
     caption = (
-        f"👋 <b>{first_name}, вас приветствует команда WhaleTrade 🐳\n"
+        f"👋 <b>{first_name}</b>, вас приветствует команда WhaleTrade 🐳\n\n"
         f"Спасибо за интерес к нашей работе!\n\n"
-        "Мы торгуем на рынке Forex\n"
+        "Мы торгуем на рынке <b>Forex</b>.\n"
         "Ищем партнеров для совместных идей и их реализаций.\n\n"
-        "Два напрвления работы с нами:\n"
-        "1️⃣Готовые точки входа с аналитикой и сопровождением(WhaleTade Профит).\n"
+        "<b>Два напрвления сотрудничества:</b>\n\n"
+        "1️⃣Готовые точки входа с аналитикой и сопровождением(WhaleTade Профит).\n\n"
         "2️⃣Торговые роботы WhaleTrade(статистика с 2022 года).\n\n"
 
-        "<b>Отзывы работы с нами: @WhaleInvestmentTrading</b>"
-        "📌Пройдите <b>короткий проф-тест</b> и определите направление которое подходит именно вам.\n\n"
+        "<b>Отзывы работы с нами: @WhaleInvestmentTrading</b>\n\n"
+       
+        "📣 Так же <b>подпишитесь</b> на наш открытый канал там много разборов и полезной информации:\nhttps://t.me/+on4x8BSxxv5hZmYy\n\n"
 
-        "📣 Так же <b>подпишитесь</b> на наш открытый канал там много разборов и полезной информации: https://t.me/+on4x8BSxxv5hZmYy\n\n"
-        "👇 Чтобы пройти тест, нажмите кнопку ниже: 👇"
+        "📌Пройдите <b>короткий проф-тест</b> и определите направление которое подходит именно вам👇"
     )
 
     # 1) Видео + текст (caption) + инлайн-кнопка
@@ -167,12 +167,14 @@ async def cmd_start(message: Message, command: CommandObject):
             caption=caption,
             reply_markup=get_quiz_start_inline_kb(),
             parse_mode="HTML",
+            disable_web_page_preview=True,
         )
     else:
         await message.answer(
             caption,
             reply_markup=get_quiz_start_inline_kb(),
             parse_mode="HTML",
+            disable_web_page_preview=True,
         )
 
     # 2) Отдельным сообщением показываем реплай-меню

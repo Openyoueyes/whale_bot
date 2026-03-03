@@ -90,16 +90,13 @@ def _quant_text() -> str:
         "⚡ <b>WhaleTrade QUANT — импульсный робот для резких движений</b>\n\n"
         "Автоматический алгоритм, который заходит в рынок только при ускорении цены.\n"
         "Без уровней, без трендовых фильтров — только работа с импульсом.\n\n"
-
         "🔎 <b>Принцип работы:</b>\n"
         "Если цена за короткое время проходит заданную дистанцию —\n"
         "робот фиксирует импульс и входит в движение.\n"
         "Вверх — BUY, вниз — SELL.\n\n"
-
         "🥇 <b>Особенно эффективен на XAUUSD (золото)</b>\n"
         "Золото часто даёт резкие ускорения и мощные новостные выносы,\n"
         "что идеально подходит для импульсной логики.\n\n"
-
         "⚙️ <b>Сопровождение позиции:</b>\n"
         "🔵 Динамический трейлинг-стоп\n"
         "🔵 Возможность открытия дополнительной позиции при продолжении импульса\n"
@@ -111,14 +108,8 @@ def _quant_text() -> str:
         "🔒 Ограничение времени торговли\n"
         "🔒 Возможность остановки до следующего дня\n\n"
 
-        "📌 <b>Ключевые параметры:</b>\n"
-        "PipsStep — сила импульса для входа\n"
-        "OpenTime — время ускорения\n"
-        "TrailStart / Trail — логика защиты прибыли\n"
-        "TakeProfit — цель для серии\n\n"
         "📈 Лучший инструмент — XAUUSD.\n\n"
 
-        "✉️ Хотите протестировать или получить настройки под брокера?\n"
     )
 
 
@@ -209,7 +200,7 @@ async def products_back(callback: CallbackQuery):
         try:
             media = InputMediaPhoto(
                 media=ROBOTS_IMAGE_FILE_ID,
-                caption=ROBOTS_IMAGE_FILE_ID,
+                caption=ROBOTS_LIST_TEXT,
                 parse_mode="HTML",
             )
             await callback.message.edit_media(
@@ -220,7 +211,7 @@ async def products_back(callback: CallbackQuery):
             # если вдруг текущее сообщение не позволяет edit_media — отправим новое
             await callback.message.answer_photo(
                 photo=ROBOTS_IMAGE_FILE_ID,
-                caption=ROBOTS_IMAGE_FILE_ID,
+                caption=ROBOTS_LIST_TEXT,
                 reply_markup=get_robot_list_keyboard(),
                 parse_mode="HTML",
             )
