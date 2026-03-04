@@ -423,32 +423,59 @@ async def quiz_answer(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("quiz:choice:"))
 async def quiz_choice(callback: CallbackQuery):
     await callback.answer()
+
     tg_id = callback.from_user.id
     choice = callback.data.split(":")[-1]
 
-    # сохраняем выбор
-    await _set_choice(tg_id, choice)
+    # 1️⃣ Сразу убираем кнопки (мгновенная защита от повторных кликов)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramBadRequest:
+        pass
+
+    # 2️⃣ Проверяем и сохраняем выбор атомарно
+    async with async_session_maker() as session:
+
+        qs = await session.get(QuizSession, tg_id)
+
+        if not qs:
+            return
+
+        # если уже выбран — значит это повторный клик
+        if qs.gift is not None:
+            return
+
+        qs.gift = choice
+        qs.finished = True
+        qs.updated_at = datetime.utcnow()
+
+        await session.commit()
+
+    # 3️⃣ Bitrix логика
     await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
 
-    # для комментария в Bitrix — красиво
     choice_map = {
         "manual": "🧑‍💻 Ручная торговля",
         "robot": "🤖 Автоматическая торговля (роботы)",
         "consult": "☎️ Консультация",
         "session": "🎥 Разбор/сессия",
     }
+
     choice_text = choice_map.get(choice, choice)
 
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
+
         if deal:
             await bitrix_client.add_deal_timeline_comment(
                 deal["ID"],
                 f"✅ <b>Клиент выбрал направление:</b> {choice_text}",
             )
+
     except Exception:
         logger.exception("bitrix choice comment failed tg_id=%s", tg_id)
 
+    # финальное сообщение
     await _edit_quiz_message(
         callback,
         text=(
