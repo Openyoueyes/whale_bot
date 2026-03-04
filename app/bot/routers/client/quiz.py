@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
-from sqlalchemy import select, func
+from aiogram.types import CallbackQuery
+from sqlalchemy import select, func, delete, update
 
 from app.db.session import async_session_maker
 from app.db.models import QuizSession, QuizAnswer, TGUser
@@ -20,11 +20,14 @@ from app.bot.keyboards.quiz import (
 )
 from app.integrations.bitrix.client import BitrixClient
 from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
-from app.services.quiz_notify_service import send_quiz_result_notification
+from app.services.quiz_notify_service import (
+    send_quiz_result_notification,
+    send_quiz_choice_notification,
+)
+from app.services.user_service import get_or_create_tg_user  # ✅ твоя функция
 
 logger = logging.getLogger(__name__)
 router = Router(name="client-quiz")
-
 bitrix_client = BitrixClient()
 
 
@@ -104,7 +107,6 @@ def _pretty_answer_label(key: str) -> str:
 
 
 def _pretty_answer_value(key: str, value: str) -> str:
-    # Можно расширять при необходимости
     if key == "goal":
         return {"fast": "Запустить готовый алгоритм", "learn": "Научиться торговать самому"}.get(value, value)
     if key == "time":
@@ -119,13 +121,11 @@ def _pretty_answer_value(key: str, value: str) -> str:
 
 
 def _format_answers_for_comment(answers: dict[str, str]) -> str:
-    # Выводим в заданном порядке, чтобы было красиво
     order = ["goal", "time", "experience", "money", "discipline"]
     lines: list[str] = []
     for k in order:
         if k in answers:
             lines.append(f"• {_pretty_answer_label(k)}: {_pretty_answer_value(k, answers[k])}")
-    # На случай если появятся новые ключи
     for k, v in answers.items():
         if k not in order:
             lines.append(f"• {_pretty_answer_label(k)}: {_pretty_answer_value(k, v)}")
@@ -137,38 +137,25 @@ def _format_answers_for_comment(answers: dict[str, str]) -> str:
 # ============================================================
 
 def _manual_score(ans: dict[str, str]) -> int:
-    """
-    Условная оценка "готов к ручной торговле".
-    Чем выше — тем больше вероятность, что человеку зайдёт ручной формат.
-    """
     score = 0
 
-    # хочет учиться — плюс в "manual"
     if ans.get("goal") == "learn":
         score += 2
 
-    # больше времени — плюс
     if ans.get("time") in {"60", "120"}:
         score += 2
     elif ans.get("time") == "30":
         score += 1
 
-    # опыт — плюс
     if ans.get("experience") in {"2", "3"}:
         score += 2
     elif ans.get("experience") == "1":
         score += 1
 
-    # доход: чем выше ожидания — тем чаще человеку ближе "системность/роботы",
-    # но в реальности бывает наоборот. Дадим небольшой плюс "manual" только за средние ожидания.
-    if ans.get("money") == "300-1000":
-        score += 1
-    elif ans.get("money") == "1000+":
-        score += 0
-    else:  # 100-300
+    # небольшой вклад
+    if ans.get("money") in {"100-300", "300-1000"}:
         score += 1
 
-    # дисциплина — критично для manual
     if ans.get("discipline") == "ok":
         score += 1
 
@@ -184,25 +171,31 @@ def _rec_title(rec: str) -> str:
 
 
 # ============================================================
-# DB
+# DB HELPERS (FK-safe + idempotent)
 # ============================================================
 
-async def _get_or_create_quiz_session(tg_id: int) -> QuizSession:
+async def _ensure_user_and_session(tg_id: int, from_user) -> None:
+    """
+    Гарантирует:
+      - tg_user существует (иначе FK на quiz_session упадёт)
+      - quiz_session существует
+    """
     async with async_session_maker() as session:
+        await get_or_create_tg_user(session, from_user)  # ✅ flush внутри
         qs = await session.get(QuizSession, tg_id)
         if not qs:
-            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
-            session.add(qs)
-            await session.commit()
-        return qs
+            session.add(QuizSession(tg_id=tg_id, step=0, finished=False))
+        await session.commit()
 
 
 async def _reset_quiz(tg_id: int) -> None:
     async with async_session_maker() as session:
         qs = await session.get(QuizSession, tg_id)
         if not qs:
-            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
-            session.add(qs)
+            # на всякий (если кто-то вызвал reset без ensure)
+            session.add(QuizSession(tg_id=tg_id, step=0, finished=False))
+            await session.flush()
+            qs = await session.get(QuizSession, tg_id)
 
         qs.step = 0
         qs.finished = False
@@ -212,14 +205,22 @@ async def _reset_quiz(tg_id: int) -> None:
         qs.level = None
         qs.updated_at = datetime.utcnow()
 
-        await session.execute(
-            QuizAnswer.__table__.delete().where(QuizAnswer.tg_id == tg_id)
-        )
+        await session.execute(delete(QuizAnswer).where(QuizAnswer.tg_id == tg_id))
         await session.commit()
 
 
-async def _save_answer(tg_id: int, q_key: str, value: str) -> int:
+async def _save_answer_idempotent(tg_id: int, q_key: str, value: str) -> int:
+    """
+    Идемпотентно сохраняем ответ:
+      - удаляем прежний ответ на этот вопрос (если был)
+      - вставляем новый
+      - возвращаем кол-во отвеченных вопросов
+    Это убирает дубли при двойном клике.
+    """
     async with async_session_maker() as session:
+        await session.execute(
+            delete(QuizAnswer).where(QuizAnswer.tg_id == tg_id, QuizAnswer.q_key == q_key)
+        )
         session.add(QuizAnswer(tg_id=tg_id, q_key=q_key, answer=value))
         await session.flush()
 
@@ -228,12 +229,9 @@ async def _save_answer(tg_id: int, q_key: str, value: str) -> int:
         )
 
         qs = await session.get(QuizSession, tg_id)
-        if not qs:
-            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
-            session.add(qs)
-
-        qs.step = int(cnt or 0)
-        qs.updated_at = datetime.utcnow()
+        if qs:
+            qs.step = int(cnt or 0)
+            qs.updated_at = datetime.utcnow()
 
         await session.commit()
         return int(cnt or 0)
@@ -242,22 +240,10 @@ async def _save_answer(tg_id: int, q_key: str, value: str) -> int:
 async def _load_answers_map(tg_id: int) -> dict[str, str]:
     async with async_session_maker() as session:
         res = await session.execute(
-            QuizAnswer.__table__.select()
-            .where(QuizAnswer.tg_id == tg_id)
+            select(QuizAnswer.q_key, QuizAnswer.answer).where(QuizAnswer.tg_id == tg_id)
         )
-        rows = res.mappings().all()
-
-    return {r["q_key"]: r["answer"] for r in rows}
-
-
-async def _set_choice(tg_id: int, choice: str) -> None:
-    async with async_session_maker() as session:
-        qs = await session.get(QuizSession, tg_id)
-        if qs:
-            qs.gift = choice  # используем поле gift как storage выбора
-            qs.finished = True
-            qs.updated_at = datetime.utcnow()
-            await session.commit()
+        rows = res.all()
+    return {k: v for k, v in rows}
 
 
 async def _mark_user_quiz_completed(tg_id: int) -> None:
@@ -270,19 +256,45 @@ async def _mark_user_quiz_completed(tg_id: int) -> None:
             await session.commit()
 
 
-async def _save_quiz_summary(tg_id: int, *, score: int, level: str) -> None:
+async def _try_finalize_quiz_once(tg_id: int, score: int, level: str) -> bool:
+    """
+    Атомарная защита от дублей (последний ответ):
+      - обновляем score/level только если score ещё NULL
+    Возвращает True если это первый финалайз, False если уже было.
+    """
     async with async_session_maker() as session:
-        qs = await session.get(QuizSession, tg_id)
-        if not qs:
-            qs = QuizSession(tg_id=tg_id, step=len(QUIZ), finished=False)
-            session.add(qs)
-
-        qs.score = score
-        qs.level = level
-        qs.finished = True
-        qs.updated_at = datetime.utcnow()
-
+        res = await session.execute(
+            update(QuizSession)
+            .where(QuizSession.tg_id == tg_id, QuizSession.score.is_(None))
+            .values(
+                score=score,
+                level=level,
+                finished=True,
+                step=len(QUIZ),
+                updated_at=datetime.utcnow(),
+            )
+        )
         await session.commit()
+        return (res.rowcount or 0) > 0
+
+
+async def _try_set_choice_once(tg_id: int, choice: str) -> bool:
+    """
+    Атомарная защита от дублей (manual/robot):
+      - обновляем gift только если gift ещё NULL
+    """
+    async with async_session_maker() as session:
+        res = await session.execute(
+            update(QuizSession)
+            .where(QuizSession.tg_id == tg_id, QuizSession.gift.is_(None))
+            .values(
+                gift=choice,
+                finished=True,
+                updated_at=datetime.utcnow(),
+            )
+        )
+        await session.commit()
+        return (res.rowcount or 0) > 0
 
 
 # ============================================================
@@ -291,11 +303,7 @@ async def _save_quiz_summary(tg_id: int, *, score: int, level: str) -> None:
 
 async def _edit_quiz_message(callback: CallbackQuery, *, text: str, reply_markup=None):
     try:
-        await callback.message.edit_text(
-            text,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-        )
+        await callback.message.edit_text(text, reply_markup=reply_markup, parse_mode="HTML")
     except TelegramBadRequest:
         await callback.message.answer(text, reply_markup=reply_markup, parse_mode="HTML")
 
@@ -303,11 +311,7 @@ async def _edit_quiz_message(callback: CallbackQuery, *, text: str, reply_markup
 async def _show_question(callback: CallbackQuery, step: int):
     q = QUIZ[step]
     text = f"🧩 <b>Проф-тест трейдера:</b>\n\n{html.escape(q.title)}"
-    await _edit_quiz_message(
-        callback,
-        text=text,
-        reply_markup=get_quiz_answer_inline_kb(q),
-    )
+    await _edit_quiz_message(callback, text=text, reply_markup=get_quiz_answer_inline_kb(q))
 
 
 # ============================================================
@@ -317,8 +321,13 @@ async def _show_question(callback: CallbackQuery, step: int):
 @router.callback_query(F.data == "quiz:start")
 async def quiz_start(callback: CallbackQuery):
     await callback.answer()
+    if not callback.message:
+        return
+
     tg_id = callback.from_user.id
-    await _get_or_create_quiz_session(tg_id)  # ✅ создаём сессию
+
+    # ✅ FK-safe: пользователь мог прийти из рассылки после очистки БД
+    await _ensure_user_and_session(tg_id, callback.from_user)
     await _reset_quiz(tg_id)
     await _show_question(callback, 0)
 
@@ -336,34 +345,57 @@ async def quiz_cancel(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("quiz:answer:"))
 async def quiz_answer(callback: CallbackQuery):
     await callback.answer()
-    tg_id = callback.from_user.id
+    if not callback.message:
+        return
 
+    tg_id = callback.from_user.id
     _, _, q_key, value = callback.data.split(":", 3)
 
-    step = await _save_answer(tg_id, q_key, value)
+    # ✅ идемпотентное сохранение ответа (перезапись при двойном клике)
+    step = await _save_answer_idempotent(tg_id, q_key, value)
 
     # продолжаем тест
     if step < len(QUIZ):
         await _show_question(callback, step)
         return
 
-    # тест завершён: собираем ответы/скоринг
+    # ✅ мгновенно убираем кнопки последнего вопроса (защита от повторных тапов)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramBadRequest:
+        pass
+
+    # собираем ответы/скоринг
     answers = await _load_answers_map(tg_id)
     score = _manual_score(answers)
     rec = _recommendation(answers)
     level = _rec_title(rec)
-
-    # сохраняем агрегаты
-    await _save_quiz_summary(tg_id, score=score, level=level)
-    await _mark_user_quiz_completed(tg_id)
-
-    # двигаем стадию в bitrix при необходимости
-    await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
-
-    # красивый текст ответов
     answers_text = _format_answers_for_comment(answers)
 
-    # комментарий в Bitrix (структурировано)
+    # ✅ атомарная защита: финализируем тест только один раз
+    first_finalize = await _try_finalize_quiz_once(tg_id, score=score, level=level)
+    await _mark_user_quiz_completed(tg_id)
+
+    # если уже финализировали ранее — просто покажем выбор направления и выйдем
+    if not first_finalize:
+        await _edit_quiz_message(
+            callback,
+            text=(
+                "✅ <b>Тест завершён!</b>\n\n"
+                f"По результатам вам больше подходит:\n<b>{level}</b>\n\n"
+                "Выберите направление 👇"
+            ),
+            reply_markup=get_quiz_choice_inline_kb(recommended=rec),
+        )
+        return
+
+    # Bitrix stage guard
+    try:
+        await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
+    except Exception:
+        pass
+
+    # 1) комментарий в Bitrix — 1 раз
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
         if deal:
@@ -382,8 +414,7 @@ async def quiz_answer(callback: CallbackQuery):
     except Exception:
         logger.exception("bitrix comment failed tg_id=%s", tg_id)
 
-    # уведомление в группу/админам:
-    # 1) стандартный notify (как у тебя уже заведено)
+    # 2) уведомление админам/в группу — 1 раз (включая ответы)
     try:
         await send_quiz_result_notification(
             bot=callback.bot,
@@ -395,9 +426,9 @@ async def quiz_answer(callback: CallbackQuery):
             answers_text=answers_text,
         )
     except Exception:
-        logger.exception("notify_quiz_completed_no_phone failed tg_id=%s", tg_id)
+        logger.exception("send_quiz_result_notification failed tg_id=%s", tg_id)
 
-    # финальный экран
+    # финальный экран (выбор направления)
     await _edit_quiz_message(
         callback,
         text=(
@@ -412,93 +443,75 @@ async def quiz_answer(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("quiz:choice:"))
 async def quiz_choice(callback: CallbackQuery):
     await callback.answer()
+    if not callback.message:
+        return
 
     tg_id = callback.from_user.id
     choice = callback.data.split(":")[-1]
 
-    # 1️⃣ убираем кнопки
+    # ✅ мгновенно убираем кнопки
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except TelegramBadRequest:
         pass
 
-    # 2️⃣ проверяем и сохраняем выбор
-    async with async_session_maker() as session:
-        qs = await session.get(QuizSession, tg_id)
-        if not qs:
-            qs = QuizSession(tg_id=tg_id, step=len(QUIZ), finished=True)
-            session.add(qs)
-            await session.flush()
-
-        if qs.gift is not None:
-            return
-
-        qs.gift = choice
-        qs.finished = True
-        qs.updated_at = datetime.utcnow()
-        await session.commit()
-
-    # 3️⃣ Bitrix
-    await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
+    # ✅ атомарно записываем выбор (idempotent)
+    first_choice = await _try_set_choice_once(tg_id, choice)
+    if not first_choice:
+        # уже было — просто ответим клиенту (без повторных уведомлений)
+        await _edit_quiz_message(
+            callback,
+            text=(
+                "✅ Спасибо за выбор!\n\n"
+                "Менеджер свяжется с вами и отправит информацию "
+                "по развитию в выбранном направлении."
+            ),
+            reply_markup=get_quiz_start_inline_kb(),
+        )
+        return
 
     choice_map = {
         "manual": "🧑‍💻 Ручная торговля",
         "robot": "🤖 Автоматическая торговля (роботы)",
     }
-
     choice_text = choice_map.get(choice, choice)
 
+    # Bitrix stage guard
+    try:
+        await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
+    except Exception:
+        pass
+
+    # Bitrix comment (1 раз)
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
-
         if deal:
             await bitrix_client.add_deal_timeline_comment(
                 deal["ID"],
                 f"✅ <b>Клиент выбрал направление:</b> {choice_text}",
             )
-
     except Exception:
         logger.exception("bitrix choice comment failed tg_id=%s", tg_id)
 
-    # 4️⃣ уведомление админам и группе
+    # notify admins/group (1 раз)
     try:
-        from app.config import ADMIN_IDS, GROUP_CHAT_MESSAGES_BOT_ID
-
-        text = (
-            "🎯 <b>Клиент выбрал направление</b>\n"
-            "------------------------------------\n"
-            f"<b>TG ID:</b> <code>{tg_id}</code>\n"
-            f"<b>Username:</b> @{callback.from_user.username or 'нет'}\n"
-            f"<b>Имя:</b> {callback.from_user.full_name}\n\n"
-            f"<b>Выбор:</b> {choice_text}"
+        await send_quiz_choice_notification(
+            bot=callback.bot,
+            tg_id=tg_id,
+            username=callback.from_user.username,
+            full_name=callback.from_user.full_name,
+            choice_text=choice_text,
         )
-
-        for admin_id in ADMIN_IDS:
-            try:
-                await callback.bot.send_message(
-                    admin_id,
-                    text,
-                    parse_mode="HTML"
-                )
-            except Exception:
-                pass
-
-        if GROUP_CHAT_MESSAGES_BOT_ID:
-            try:
-                await callback.bot.send_message(
-                    GROUP_CHAT_MESSAGES_BOT_ID,
-                    text,
-                    parse_mode="HTML"
-                )
-            except Exception:
-                pass
-
     except Exception:
-        logger.exception("choice notify failed tg_id=%s", tg_id)
+        logger.exception("send_quiz_choice_notification failed tg_id=%s", tg_id)
 
-    # 5️⃣ сообщение клиенту
-    await callback.message.edit_text(
-        "✅ Спасибо за выбор!\n\n"
-        "Менеджер свяжется с вами и отправит информацию "
-        "по развитию в выбранном направлении.",
+    # ответ клиенту (ВАЖНО: через _edit_quiz_message, чтобы не упасть на edit_text edge-cases)
+    await _edit_quiz_message(
+        callback,
+        text=(
+            "✅ Спасибо за выбор!\n\n"
+            "Менеджер свяжется с вами и отправит информацию "
+            "по развитию в выбранном направлении."
+        ),
+        reply_markup=get_quiz_start_inline_kb(),
     )
