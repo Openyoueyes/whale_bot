@@ -88,7 +88,7 @@ class BitrixClient:
 
         fields: Dict[str, Any] = {
             "NAME": full_name,
-            "COMMENTS": f"Лид из Sniper Club\nИсточник: {origin_text}",
+            "COMMENTS": f"Лид из Whale Trade\nИсточник: {origin_text}",
             "SOURCE_ID": "WEB",
             BITRIX_FIELD_TG_ID_LEAD: str(user_info["id"]),
             BITRIX_FIELD_TG_USERNAME_LEAD: user_info.get("username"),
