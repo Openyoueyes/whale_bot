@@ -25,8 +25,12 @@ class BroadcastScope(str, Enum):
 
 QuizButtonMode = Optional[Literal["add", "remove"]]  # None = keep as original
 
+
+# =========================
+# helpers
+# =========================
+
 _BITRIX_COMMENT_MAX = 3500
-_NAME_FALLBACK = "трейдер"
 
 
 def _truncate(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
@@ -36,19 +40,9 @@ def _truncate(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
     return t[: limit - 50].rstrip() + "\n...\n[обрезано]"
 
 
-def _first_name_from_bitrix_name(name: str | None, *, fallback: str = _NAME_FALLBACK) -> str:
-    s = (name or "").strip()
-    if not s:
-        return fallback
-    s = re.sub(r"\s+", " ", s)
-    first = s.split(" ", 1)[0].strip()
-    return first or fallback
-
-
-def _replace_name_placeholder(text: str, first_name: str) -> str:
-    # ровно то, что ты хочешь: <name>
-    return (text or "").replace("<name>", first_name)
-
+# =========================
+# recipients
+# =========================
 
 async def collect_recipients(
     scope: BroadcastScope,
@@ -123,125 +117,113 @@ async def _move_deal_to_blocked_stage(tg_id: int) -> None:
         pass
 
 
+# =========================
+# quiz button helpers
+# =========================
+
 def _quiz_start_kb(text: str = "🧠 Пройти проф-тест трейдера") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=text, callback_data="quiz:start")]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=text, callback_data="quiz:start")]]
+    )
 
 
-async def _apply_quiz_button_mode(
+def _compute_target_reply_markup(
+    *,
+    mode: QuizButtonMode,
+    quiz_button_text: str,
+    original_reply_markup: InlineKeyboardMarkup | None,
+) -> InlineKeyboardMarkup | None:
+    """
+    Возвращает какую клавиатуру держать у СКОПИРОВАННОГО сообщения:
+      - keep (mode None): оставляем оригинальную (из сообщения администратора)
+      - remove: None
+      - add: quiz_start_kb
+    """
+    if mode is None:
+        return original_reply_markup
+    if mode == "remove":
+        return None
+    if mode == "add":
+        return _quiz_start_kb(text=quiz_button_text)
+    return original_reply_markup
+
+
+async def _apply_reply_markup(
     bot: Bot,
     *,
     chat_id: int,
-    copied_message_id: int,
-    mode: QuizButtonMode,
-    quiz_button_text: str,
+    message_id: int,
+    reply_markup: InlineKeyboardMarkup | None,
 ) -> None:
-    if mode is None:
-        return
-
-    if mode == "remove":
-        await bot.edit_message_reply_markup(chat_id=chat_id, message_id=copied_message_id, reply_markup=None)
-        return
-
-    if mode == "add":
-        await bot.edit_message_reply_markup(
-            chat_id=chat_id,
-            message_id=copied_message_id,
-            reply_markup=_quiz_start_kb(text=quiz_button_text),
-        )
-        return
+    await bot.edit_message_reply_markup(
+        chat_id=chat_id,
+        message_id=message_id,
+        reply_markup=reply_markup,
+    )
 
 
-async def _get_first_name_from_bitrix_by_tg_id(tg_id: int) -> str:
+# =========================
+# Bitrix name helpers
+# =========================
+
+async def _get_first_name_from_bitrix(tg_id: int) -> str | None:
     """
-    1) находим сделку по TG_ID
-    2) из сделки берём CONTACT_ID (через crm.deal.get)
-    3) crm.contact.get -> NAME -> первое слово
+    Имя берём из контакта Bitrix:
+      deal by TG_ID -> CONTACT_ID -> contact.get -> NAME -> first word
+    Если CONTACT_ID нет — вернём None.
     """
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
     except Exception:
         deal = None
-
     if not deal:
-        return _NAME_FALLBACK
+        return None
 
     deal_id = deal.get("ID")
     if not deal_id:
-        return _NAME_FALLBACK
+        return None
 
     try:
         full_deal = await bitrix_client.get_deal(deal_id)
     except Exception:
-        full_deal = {}
+        return None
 
-    # Bitrix обычно: CONTACT_ID (строка) либо CONTACT_IDS (массив)
     contact_id = full_deal.get("CONTACT_ID")
+
+    # fallback: CONTACT_IDS (если порталом возвращается список)
     if not contact_id:
-        # иногда бывает массив
-        ids = full_deal.get("CONTACT_IDS")
-        if isinstance(ids, list) and ids:
-            contact_id = ids[0].get("CONTACT_ID") or ids[0].get("ID")
+        contact_ids = full_deal.get("CONTACT_IDS") or []
+        if isinstance(contact_ids, list) and contact_ids:
+            first = contact_ids[0]
+            if isinstance(first, dict):
+                contact_id = first.get("CONTACT_ID")
+            else:
+                contact_id = first
 
     if not contact_id:
-        return _NAME_FALLBACK
+        return None
 
     try:
         contact = await bitrix_client.get_contact(contact_id)
     except Exception:
-        contact = {}
+        return None
 
-    return _first_name_from_bitrix_name(contact.get("NAME"), fallback=_NAME_FALLBACK)
+    name_raw = (contact.get("NAME") or "").strip()
+    if not name_raw:
+        return None
+
+    # NAME у тебя типа "Алексей Дмитриев" => берём "Алексей"
+    first_name = re.split(r"\s+", name_raw)[0].strip()
+    return first_name or None
 
 
-async def _personalize_copied_message(
-    bot: Bot,
-    *,
-    chat_id: int,
-    copied_message_id: int,
-    template_text: str,
-    first_name: str,
-    original_reply_markup: InlineKeyboardMarkup | None,
-) -> None:
-    """
-    Если исходник был:
-      - текст → edit_message_text
-      - медиа с caption → edit_message_caption
-    Мы не знаем тип, поэтому пробуем text, если не получится — caption.
-    IMPORTANT: чтобы не потерять кнопки при keep — переустанавливаем original_reply_markup.
-    """
-    personalized = _replace_name_placeholder(template_text, first_name)
+def _personalize_html(html: str, name: str) -> str:
+    return html.replace("{name}", name)
 
-    if personalized == template_text:
-        return  # нечего менять
 
-    # 1) пробуем как TEXT
-    try:
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=copied_message_id,
-            text=personalized,
-            parse_mode="HTML",
-            reply_markup=original_reply_markup,
-            disable_web_page_preview=True,
-        )
-        return
-    except TelegramBadRequest:
-        pass
-    except Exception:
-        pass
-
-    # 2) пробуем как CAPTION
-    try:
-        await bot.edit_message_caption(
-            chat_id=chat_id,
-            message_id=copied_message_id,
-            caption=personalized,
-            parse_mode="HTML",
-            reply_markup=original_reply_markup,
-        )
-    except Exception:
-        pass
-
+# =========================
+# main sender
+# =========================
 
 async def send_message_broadcast(
     bot: Bot,
@@ -255,8 +237,9 @@ async def send_message_broadcast(
 
     bitrix_message_body: str | None = None,
 
-    # ✅ NEW: персонализация <name> для любого типа
-    telegram_template_text: str = "",
+    # ✅ персонализация {name} с сохранением форматирования
+    tg_html_body: str | None = None,
+    tg_html_kind: str | None = None,  # "text" | "caption" | None
     original_reply_markup: InlineKeyboardMarkup | None = None,
 ) -> Dict[str, int]:
     sent = 0
@@ -270,10 +253,14 @@ async def send_message_broadcast(
 
     body_for_bitrix = _truncate(bitrix_message_body or "<без текста>")
 
-    need_personalize = "<name>" in (telegram_template_text or "")
+    # заранее вычислим, какую клаву хотим иметь у доставленного сообщения
+    target_markup = _compute_target_reply_markup(
+        mode=quiz_button_mode,
+        quiz_button_text=quiz_button_text,
+        original_reply_markup=original_reply_markup,
+    )
 
-    # кеш имён, чтобы не дергать Bitrix 1000 раз
-    name_cache: Dict[int, str] = {}
+    needs_personalization = bool(tg_html_body and tg_html_kind and "{name}" in tg_html_body)
 
     for tg_id in recipients:
         delivered = False
@@ -281,7 +268,11 @@ async def send_message_broadcast(
 
         # --- Telegram: copy_message ---
         try:
-            copied = await bot.copy_message(chat_id=tg_id, from_chat_id=from_chat_id, message_id=message_id)
+            copied = await bot.copy_message(
+                chat_id=tg_id,
+                from_chat_id=from_chat_id,
+                message_id=message_id,
+            )
             copied_id = int(getattr(copied, "message_id", 0) or 0)
             delivered = True
 
@@ -315,31 +306,49 @@ async def send_message_broadcast(
             failed += 1
             continue
 
-        # --- персонализация <name> (сначала), чтобы потом не ломать кнопки режима ---
-        if delivered and copied_id and need_personalize:
-            if tg_id not in name_cache:
-                name_cache[tg_id] = await _get_first_name_from_bitrix_by_tg_id(tg_id)
-            first_name = name_cache[tg_id]
-
-            await _personalize_copied_message(
-                bot,
-                chat_id=tg_id,
-                copied_message_id=copied_id,
-                template_text=telegram_template_text,
-                first_name=first_name,
-                original_reply_markup=original_reply_markup,
-            )
-
-        # --- опционально правим inline-клавиатуру (quiz button mode) ---
+        # --- 1) применяем/сохраняем клавиатуру (чтобы edit_text/caption потом её не "съел") ---
         if delivered and copied_id:
             try:
-                await _apply_quiz_button_mode(
+                # mode=None -> ставим original_reply_markup (если была)
+                # mode=add/remove -> ставим целевую
+                await _apply_reply_markup(
                     bot,
                     chat_id=tg_id,
-                    copied_message_id=copied_id,
-                    mode=quiz_button_mode,
-                    quiz_button_text=quiz_button_text,
+                    message_id=copied_id,
+                    reply_markup=target_markup,
                 )
+            except TelegramBadRequest:
+                pass
+            except Exception:
+                pass
+
+        # --- 2) персонализация {name} (HTML) ---
+        if delivered and copied_id and needs_personalization:
+            try:
+                first_name = await _get_first_name_from_bitrix(tg_id)
+                if not first_name:
+                    first_name = "трейдер"
+
+                html_body = _personalize_html(tg_html_body or "", first_name)
+
+                # ВАЖНО: передаём reply_markup=target_markup, чтобы не слетали кнопки
+                if tg_html_kind == "text":
+                    await bot.edit_message_text(
+                        chat_id=tg_id,
+                        message_id=copied_id,
+                        text=html_body,
+                        parse_mode="HTML",
+                        disable_web_page_preview=True,
+                        reply_markup=target_markup,
+                    )
+                elif tg_html_kind == "caption":
+                    await bot.edit_message_caption(
+                        chat_id=tg_id,
+                        message_id=copied_id,
+                        caption=html_body,
+                        parse_mode="HTML",
+                        reply_markup=target_markup,
+                    )
             except TelegramBadRequest:
                 pass
             except Exception:
@@ -348,7 +357,7 @@ async def send_message_broadcast(
         if delivered:
             sent += 1
 
-        # --- Bitrix comment (как у тебя было) ---
+        # --- Bitrix: логируем текст рассылки ---
         try:
             deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
         except Exception:
