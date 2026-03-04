@@ -513,5 +513,4 @@ async def quiz_choice(callback: CallbackQuery):
             "Менеджер свяжется с вами и отправит информацию "
             "по развитию в выбранном направлении."
         ),
-        reply_markup=get_quiz_start_inline_kb(),
     )
