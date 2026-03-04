@@ -1,3 +1,5 @@
+# app/bot/services/quiz_notify_service.py
+
 from __future__ import annotations
 
 import logging
@@ -14,7 +16,6 @@ bitrix_client = BitrixClient()
 
 
 def _kb_reply_to_client(tg_id: int, deal_id: str | None) -> InlineKeyboardMarkup:
-
     deal_part = deal_id if deal_id else "no_deal"
 
     return InlineKeyboardMarkup(
@@ -30,7 +31,6 @@ def _kb_reply_to_client(tg_id: int, deal_id: str | None) -> InlineKeyboardMarkup
 
 
 async def _get_deal_id_for_tg(tg_id: int) -> str | None:
-
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
     except Exception:
@@ -43,7 +43,6 @@ async def _get_deal_id_for_tg(tg_id: int) -> str | None:
 
 
 async def _get_deal_link_and_responsible(deal_id: str | None) -> Tuple[str, str]:
-
     deal_link_text = "Сделка не найдена"
     responsible_text = "не назначен"
 
@@ -76,16 +75,15 @@ async def _get_deal_link_and_responsible(deal_id: str | None) -> Tuple[str, str]
 
 
 async def send_quiz_result_notification(
-    *,
-    bot: Bot,
-    tg_id: int,
-    username: str | None,
-    full_name: str,
-    level: str,
-    score: int,
-    answers_text: str,
+        *,
+        bot: Bot,
+        tg_id: int,
+        username: str | None,
+        full_name: str,
+        level: str,
+        score: int,
+        answers_text: str,
 ) -> None:
-
     deal_id = await _get_deal_id_for_tg(tg_id)
 
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)

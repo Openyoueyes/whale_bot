@@ -187,17 +187,29 @@ def _rec_title(rec: str) -> str:
 # DB
 # ============================================================
 
+async def _get_or_create_quiz_session(tg_id: int) -> QuizSession:
+    async with async_session_maker() as session:
+        qs = await session.get(QuizSession, tg_id)
+        if not qs:
+            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
+            session.add(qs)
+            await session.commit()
+        return qs
+
 async def _reset_quiz(tg_id: int) -> None:
     async with async_session_maker() as session:
         qs = await session.get(QuizSession, tg_id)
-        if qs:
-            qs.step = 0
-            qs.finished = False
-            qs.gift = None
-            qs.phone = None
-            qs.score = None
-            qs.level = None
-            qs.updated_at = datetime.utcnow()
+        if not qs:
+            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
+            session.add(qs)
+
+        qs.step = 0
+        qs.finished = False
+        qs.gift = None
+        qs.phone = None
+        qs.score = None
+        qs.level = None
+        qs.updated_at = datetime.utcnow()
 
         await session.execute(
             QuizAnswer.__table__.delete().where(QuizAnswer.tg_id == tg_id)
@@ -211,14 +223,16 @@ async def _save_answer(tg_id: int, q_key: str, value: str) -> int:
         await session.flush()
 
         cnt = await session.scalar(
-            select(func.count()).select_from(QuizAnswer)
-            .where(QuizAnswer.tg_id == tg_id)
+            select(func.count()).select_from(QuizAnswer).where(QuizAnswer.tg_id == tg_id)
         )
 
         qs = await session.get(QuizSession, tg_id)
-        if qs:
-            qs.step = int(cnt or 0)
-            qs.updated_at = datetime.utcnow()
+        if not qs:
+            qs = QuizSession(tg_id=tg_id, step=0, finished=False)
+            session.add(qs)
+
+        qs.step = int(cnt or 0)
+        qs.updated_at = datetime.utcnow()
 
         await session.commit()
         return int(cnt or 0)
@@ -258,13 +272,16 @@ async def _mark_user_quiz_completed(tg_id: int) -> None:
 async def _save_quiz_summary(tg_id: int, *, score: int, level: str) -> None:
     async with async_session_maker() as session:
         qs = await session.get(QuizSession, tg_id)
-        if qs:
-            qs.score = score
-            qs.level = level
-            qs.finished = True
-            qs.updated_at = datetime.utcnow()
-        await session.commit()
+        if not qs:
+            qs = QuizSession(tg_id=tg_id, step=len(QUIZ), finished=False)
+            session.add(qs)
 
+        qs.score = score
+        qs.level = level
+        qs.finished = True
+        qs.updated_at = datetime.utcnow()
+
+        await session.commit()
 
 # ============================================================
 # UI
@@ -299,6 +316,7 @@ async def _show_question(callback: CallbackQuery, step: int):
 async def quiz_start(callback: CallbackQuery):
     await callback.answer()
     tg_id = callback.from_user.id
+    await _get_or_create_quiz_session(tg_id)   # ✅ создаём сессию
     await _reset_quiz(tg_id)
     await _show_question(callback, 0)
 
@@ -404,11 +422,11 @@ async def quiz_choice(callback: CallbackQuery):
 
     # 2️⃣ проверяем и сохраняем выбор
     async with async_session_maker() as session:
-
         qs = await session.get(QuizSession, tg_id)
-
         if not qs:
-            return
+            qs = QuizSession(tg_id=tg_id, step=len(QUIZ), finished=True)
+            session.add(qs)
+            await session.flush()
 
         if qs.gift is not None:
             return
@@ -416,7 +434,6 @@ async def quiz_choice(callback: CallbackQuery):
         qs.gift = choice
         qs.finished = True
         qs.updated_at = datetime.utcnow()
-
         await session.commit()
 
     # 3️⃣ Bitrix
