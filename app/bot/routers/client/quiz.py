@@ -196,6 +196,7 @@ async def _get_or_create_quiz_session(tg_id: int) -> QuizSession:
             await session.commit()
         return qs
 
+
 async def _reset_quiz(tg_id: int) -> None:
     async with async_session_maker() as session:
         qs = await session.get(QuizSession, tg_id)
@@ -283,6 +284,7 @@ async def _save_quiz_summary(tg_id: int, *, score: int, level: str) -> None:
 
         await session.commit()
 
+
 # ============================================================
 # UI
 # ============================================================
@@ -316,7 +318,7 @@ async def _show_question(callback: CallbackQuery, step: int):
 async def quiz_start(callback: CallbackQuery):
     await callback.answer()
     tg_id = callback.from_user.id
-    await _get_or_create_quiz_session(tg_id)   # ✅ создаём сессию
+    await _get_or_create_quiz_session(tg_id)  # ✅ создаём сессию
     await _reset_quiz(tg_id)
     await _show_question(callback, 0)
 
@@ -499,5 +501,4 @@ async def quiz_choice(callback: CallbackQuery):
         "✅ Спасибо за выбор!\n\n"
         "Менеджер свяжется с вами и отправит информацию "
         "по развитию в выбранном направлении.",
-        reply_markup=get_quiz_start_inline_kb(),
     )
