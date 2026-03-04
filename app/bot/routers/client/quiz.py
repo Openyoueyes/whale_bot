@@ -20,7 +20,7 @@ from app.bot.keyboards.quiz import (
 )
 from app.integrations.bitrix.client import BitrixClient
 from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
-from app.services.quiz_notify_service import notify_quiz_completed_no_phone
+from app.services.quiz_notify_service import send_quiz_result_notification
 
 logger = logging.getLogger(__name__)
 router = Router(name="client-quiz")
@@ -365,49 +365,17 @@ async def quiz_answer(callback: CallbackQuery):
     # уведомление в группу/админам:
     # 1) стандартный notify (как у тебя уже заведено)
     try:
-        await notify_quiz_completed_no_phone(
+        await send_quiz_result_notification(
             bot=callback.bot,
             tg_id=tg_id,
             username=callback.from_user.username,
             full_name=callback.from_user.full_name,
             level=level,
             score=score,
-            gift=None,
+            answers_text=answers_text,
         )
     except Exception:
         logger.exception("notify_quiz_completed_no_phone failed tg_id=%s", tg_id)
-
-    # 2) ДОП: полный разбор с ответами — в группу/админам отдельным сообщением
-    # (чтобы твой существующий notify не ломать)
-    try:
-        text_full = (
-            "🧩 <b>Разбор ответов теста</b>\n"
-            "----------------------------------------\n"
-            f"<b>TG ID:</b> <code>{tg_id}</code>\n"
-            f"<b>Username:</b> @{callback.from_user.username or 'нет'}\n"
-            f"<b>Имя:</b> {html.escape(callback.from_user.full_name)}\n\n"
-            f"<b>Уровень:</b> {level}\n"
-            f"<b>Score:</b> {score}\n\n"
-            f"<b>Ответы:</b>\n{answers_text}"
-        )
-        # отправляем админу(ам) — так уже есть в notify, но там без ответов.
-        # Если хочешь только в группу — скажи, уберу админов.
-        from app.config import ADMIN_IDS, GROUP_CHAT_MESSAGES_BOT_ID
-
-        for admin_id in ADMIN_IDS:
-            try:
-                await callback.bot.send_message(admin_id, text_full, parse_mode="HTML", disable_web_page_preview=True)
-            except Exception:
-                pass
-
-        if GROUP_CHAT_MESSAGES_BOT_ID:
-            try:
-                await callback.bot.send_message(GROUP_CHAT_MESSAGES_BOT_ID, text_full, parse_mode="HTML",
-                                                disable_web_page_preview=True)
-            except Exception:
-                pass
-    except Exception:
-        logger.exception("full quiz breakdown send failed tg_id=%s", tg_id)
 
     # финальный экран
     await _edit_quiz_message(
