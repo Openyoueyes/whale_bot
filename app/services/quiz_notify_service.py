@@ -169,8 +169,6 @@ async def notify_quiz_completed_no_phone(
         f"<b>Имя:</b> {full_name}\n\n"
         f"<b>Уровень:</b> {level}\n"
         f"<b>Score:</b> {score}\n"
-        f"<b>Подарок:</b> {_gift_name(gift)}\n"
-        f"<b>Контакт:</b> ещё не оставлен"
     )
 
     try:
@@ -210,10 +208,8 @@ async def notify_quiz_phone_received(
         f"<b>TG ID:</b> <code>{tg_id}</code>\n"
         f"<b>Username:</b> @{username or 'нет'}\n"
         f"<b>Имя:</b> {full_name}\n\n"
-        f"<b>Телефон:</b> <code>{phone}</code>\n"
         f"<b>Уровень:</b> {level}\n"
         f"<b>Score:</b> {score}\n"
-        f"<b>Подарок:</b> {_gift_name(gift)}"
     )
 
     try:

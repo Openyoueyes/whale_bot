@@ -402,7 +402,8 @@ async def quiz_answer(callback: CallbackQuery):
 
         if GROUP_CHAT_MESSAGES_BOT_ID:
             try:
-                await callback.bot.send_message(GROUP_CHAT_MESSAGES_BOT_ID, text_full, parse_mode="HTML", disable_web_page_preview=True)
+                await callback.bot.send_message(GROUP_CHAT_MESSAGES_BOT_ID, text_full, parse_mode="HTML",
+                                                disable_web_page_preview=True)
             except Exception:
                 pass
     except Exception:
@@ -427,13 +428,13 @@ async def quiz_choice(callback: CallbackQuery):
     tg_id = callback.from_user.id
     choice = callback.data.split(":")[-1]
 
-    # 1️⃣ Сразу убираем кнопки (мгновенная защита от повторных кликов)
+    # 1️⃣ убираем кнопки
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except TelegramBadRequest:
         pass
 
-    # 2️⃣ Проверяем и сохраняем выбор атомарно
+    # 2️⃣ проверяем и сохраняем выбор
     async with async_session_maker() as session:
 
         qs = await session.get(QuizSession, tg_id)
@@ -441,7 +442,6 @@ async def quiz_choice(callback: CallbackQuery):
         if not qs:
             return
 
-        # если уже выбран — значит это повторный клик
         if qs.gift is not None:
             return
 
@@ -451,14 +451,12 @@ async def quiz_choice(callback: CallbackQuery):
 
         await session.commit()
 
-    # 3️⃣ Bitrix логика
+    # 3️⃣ Bitrix
     await move_to_first_touch_if_needed(bitrix=bitrix_client, tg_id=tg_id)
 
     choice_map = {
         "manual": "🧑‍💻 Ручная торговля",
         "robot": "🤖 Автоматическая торговля (роботы)",
-        "consult": "☎️ Консультация",
-        "session": "🎥 Разбор/сессия",
     }
 
     choice_text = choice_map.get(choice, choice)
@@ -475,13 +473,46 @@ async def quiz_choice(callback: CallbackQuery):
     except Exception:
         logger.exception("bitrix choice comment failed tg_id=%s", tg_id)
 
-    # финальное сообщение
-    await _edit_quiz_message(
-        callback,
-        text=(
-            "✅ Спасибо за выбор!\n\n"
-            "Менеджер свяжется с вами и отправит информацию "
-            "по развитию в выбранном направлении."
-        ),
+    # 4️⃣ уведомление админам и группе
+    try:
+        from app.config import ADMIN_IDS, GROUP_CHAT_MESSAGES_BOT_ID
+
+        text = (
+            "🎯 <b>Клиент выбрал направление</b>\n"
+            "------------------------------------\n"
+            f"<b>TG ID:</b> <code>{tg_id}</code>\n"
+            f"<b>Username:</b> @{callback.from_user.username or 'нет'}\n"
+            f"<b>Имя:</b> {callback.from_user.full_name}\n\n"
+            f"<b>Выбор:</b> {choice_text}"
+        )
+
+        for admin_id in ADMIN_IDS:
+            try:
+                await callback.bot.send_message(
+                    admin_id,
+                    text,
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
+
+        if GROUP_CHAT_MESSAGES_BOT_ID:
+            try:
+                await callback.bot.send_message(
+                    GROUP_CHAT_MESSAGES_BOT_ID,
+                    text,
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
+
+    except Exception:
+        logger.exception("choice notify failed tg_id=%s", tg_id)
+
+    # 5️⃣ сообщение клиенту
+    await callback.message.edit_text(
+        "✅ Спасибо за выбор!\n\n"
+        "Менеджер свяжется с вами и отправит информацию "
+        "по развитию в выбранном направлении.",
         reply_markup=get_quiz_start_inline_kb(),
     )
