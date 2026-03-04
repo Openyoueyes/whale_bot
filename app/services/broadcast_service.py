@@ -1,8 +1,7 @@
-# app/services/broadcast_service.py
-
 from __future__ import annotations
 
 import asyncio
+import re
 from enum import Enum
 from typing import Optional, Set, Dict, Iterable, Literal
 
@@ -26,12 +25,8 @@ class BroadcastScope(str, Enum):
 
 QuizButtonMode = Optional[Literal["add", "remove"]]  # None = keep as original
 
-
-# =========================
-# helpers
-# =========================
-
 _BITRIX_COMMENT_MAX = 3500
+_NAME_FALLBACK = "трейдер"
 
 
 def _truncate(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
@@ -41,9 +36,19 @@ def _truncate(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
     return t[: limit - 50].rstrip() + "\n...\n[обрезано]"
 
 
-# =========================
-# recipients
-# =========================
+def _first_name_from_bitrix_name(name: str | None, *, fallback: str = _NAME_FALLBACK) -> str:
+    s = (name or "").strip()
+    if not s:
+        return fallback
+    s = re.sub(r"\s+", " ", s)
+    first = s.split(" ", 1)[0].strip()
+    return first or fallback
+
+
+def _replace_name_placeholder(text: str, first_name: str) -> str:
+    # ровно то, что ты хочешь: <name>
+    return (text or "").replace("<name>", first_name)
+
 
 async def collect_recipients(
     scope: BroadcastScope,
@@ -77,10 +82,6 @@ async def collect_recipients(
 
 
 def _bitrix_stage_with_category(deal: dict, stage_id: str) -> str:
-    """
-    В Bitrix сделки обычно требуют префикс категории: C{CATEGORY_ID}:{STAGE}
-    Если stage_id уже с префиксом — вернём как есть.
-    """
     if ":" in stage_id:
         return stage_id
 
@@ -94,9 +95,6 @@ def _bitrix_stage_with_category(deal: dict, stage_id: str) -> str:
 
 
 async def _move_deal_to_blocked_stage(tg_id: int) -> None:
-    """
-    Переводит сделку пользователя в стадию BLOCKED_STAGE_ID.
-    """
     try:
         deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
     except Exception:
@@ -111,13 +109,11 @@ async def _move_deal_to_blocked_stage(tg_id: int) -> None:
 
     target_stage = _bitrix_stage_with_category(deal, BLOCKED_STAGE_ID)
 
-    # 1) переносим стадию
     try:
         await bitrix_client.set_deal_stage(deal_id, target_stage)
     except Exception:
         return
 
-    # 2) комментарий (не критично)
     try:
         await bitrix_client.add_deal_timeline_comment(
             deal_id,
@@ -127,16 +123,8 @@ async def _move_deal_to_blocked_stage(tg_id: int) -> None:
         pass
 
 
-# =========================
-# quiz button helpers
-# =========================
-
 def _quiz_start_kb(text: str = "🧠 Пройти проф-тест трейдера") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=text, callback_data="quiz:start")]
-        ]
-    )
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=text, callback_data="quiz:start")]])
 
 
 async def _apply_quiz_button_mode(
@@ -147,21 +135,11 @@ async def _apply_quiz_button_mode(
     mode: QuizButtonMode,
     quiz_button_text: str,
 ) -> None:
-    """
-    mode:
-      - None: ничего не делаем (оставляем как в оригинале)
-      - "add": ставим клавиатуру с кнопкой теста (заменяем любую существующую)
-      - "remove": убираем любую inline-клавиатуру
-    """
     if mode is None:
         return
 
     if mode == "remove":
-        await bot.edit_message_reply_markup(
-            chat_id=chat_id,
-            message_id=copied_message_id,
-            reply_markup=None,
-        )
+        await bot.edit_message_reply_markup(chat_id=chat_id, message_id=copied_message_id, reply_markup=None)
         return
 
     if mode == "add":
@@ -173,9 +151,97 @@ async def _apply_quiz_button_mode(
         return
 
 
-# =========================
-# main sender
-# =========================
+async def _get_first_name_from_bitrix_by_tg_id(tg_id: int) -> str:
+    """
+    1) находим сделку по TG_ID
+    2) из сделки берём CONTACT_ID (через crm.deal.get)
+    3) crm.contact.get -> NAME -> первое слово
+    """
+    try:
+        deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
+    except Exception:
+        deal = None
+
+    if not deal:
+        return _NAME_FALLBACK
+
+    deal_id = deal.get("ID")
+    if not deal_id:
+        return _NAME_FALLBACK
+
+    try:
+        full_deal = await bitrix_client.get_deal(deal_id)
+    except Exception:
+        full_deal = {}
+
+    # Bitrix обычно: CONTACT_ID (строка) либо CONTACT_IDS (массив)
+    contact_id = full_deal.get("CONTACT_ID")
+    if not contact_id:
+        # иногда бывает массив
+        ids = full_deal.get("CONTACT_IDS")
+        if isinstance(ids, list) and ids:
+            contact_id = ids[0].get("CONTACT_ID") or ids[0].get("ID")
+
+    if not contact_id:
+        return _NAME_FALLBACK
+
+    try:
+        contact = await bitrix_client.get_contact(contact_id)
+    except Exception:
+        contact = {}
+
+    return _first_name_from_bitrix_name(contact.get("NAME"), fallback=_NAME_FALLBACK)
+
+
+async def _personalize_copied_message(
+    bot: Bot,
+    *,
+    chat_id: int,
+    copied_message_id: int,
+    template_text: str,
+    first_name: str,
+    original_reply_markup: InlineKeyboardMarkup | None,
+) -> None:
+    """
+    Если исходник был:
+      - текст → edit_message_text
+      - медиа с caption → edit_message_caption
+    Мы не знаем тип, поэтому пробуем text, если не получится — caption.
+    IMPORTANT: чтобы не потерять кнопки при keep — переустанавливаем original_reply_markup.
+    """
+    personalized = _replace_name_placeholder(template_text, first_name)
+
+    if personalized == template_text:
+        return  # нечего менять
+
+    # 1) пробуем как TEXT
+    try:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=copied_message_id,
+            text=personalized,
+            parse_mode="HTML",
+            reply_markup=original_reply_markup,
+            disable_web_page_preview=True,
+        )
+        return
+    except TelegramBadRequest:
+        pass
+    except Exception:
+        pass
+
+    # 2) пробуем как CAPTION
+    try:
+        await bot.edit_message_caption(
+            chat_id=chat_id,
+            message_id=copied_message_id,
+            caption=personalized,
+            parse_mode="HTML",
+            reply_markup=original_reply_markup,
+        )
+    except Exception:
+        pass
+
 
 async def send_message_broadcast(
     bot: Bot,
@@ -184,24 +250,15 @@ async def send_message_broadcast(
     from_chat_id: int,
     message_id: int,
 
-    # None | "add" | "remove"
     quiz_button_mode: QuizButtonMode = None,
     quiz_button_text: str = "🧠 Пройти проф-тест трейдера",
 
-    # ✅ то, что реально рассылалось (текст/caption + вложения), формируй в admin router
     bitrix_message_body: str | None = None,
-) -> Dict[str, int]:
-    """
-    Универсальная рассылка:
-      - копируем сообщение как есть (любой тип)
-      - опционально: добавляем/удаляем inline-кнопку теста
-      - в Bitrix сохраняем именно содержимое (bitrix_message_body), а не "тип сообщения"
 
-    quiz_button_mode:
-      - None     -> оставить как в исходнике (ничего не меняем)
-      - "add"    -> поставить кнопку тест всем (заменит текущую inline-клавиатуру)
-      - "remove" -> убрать inline-клавиатуру у всех
-    """
+    # ✅ NEW: персонализация <name> для любого типа
+    telegram_template_text: str = "",
+    original_reply_markup: InlineKeyboardMarkup | None = None,
+) -> Dict[str, int]:
     sent = 0
     failed = 0
 
@@ -212,6 +269,11 @@ async def send_message_broadcast(
         kb_mode_text = "remove"
 
     body_for_bitrix = _truncate(bitrix_message_body or "<без текста>")
+
+    need_personalize = "<name>" in (telegram_template_text or "")
+
+    # кеш имён, чтобы не дергать Bitrix 1000 раз
+    name_cache: Dict[int, str] = {}
 
     for tg_id in recipients:
         delivered = False
@@ -224,13 +286,11 @@ async def send_message_broadcast(
             delivered = True
 
         except TelegramForbiddenError:
-            # пользователь заблокировал бота / бот не может писать
             failed += 1
             await _move_deal_to_blocked_stage(tg_id)
             continue
 
         except TelegramBadRequest as e:
-            # иногда "chat not found" / "USER_DEACTIVATED" тоже сюда попадает
             failed += 1
             msg = (str(e) or "").lower()
             if "chat not found" in msg or "user is deactivated" in msg:
@@ -255,7 +315,22 @@ async def send_message_broadcast(
             failed += 1
             continue
 
-        # --- опционально правим inline-клавиатуру ---
+        # --- персонализация <name> (сначала), чтобы потом не ломать кнопки режима ---
+        if delivered and copied_id and need_personalize:
+            if tg_id not in name_cache:
+                name_cache[tg_id] = await _get_first_name_from_bitrix_by_tg_id(tg_id)
+            first_name = name_cache[tg_id]
+
+            await _personalize_copied_message(
+                bot,
+                chat_id=tg_id,
+                copied_message_id=copied_id,
+                template_text=telegram_template_text,
+                first_name=first_name,
+                original_reply_markup=original_reply_markup,
+            )
+
+        # --- опционально правим inline-клавиатуру (quiz button mode) ---
         if delivered and copied_id:
             try:
                 await _apply_quiz_button_mode(
@@ -266,7 +341,6 @@ async def send_message_broadcast(
                     quiz_button_text=quiz_button_text,
                 )
             except TelegramBadRequest:
-                # если сообщение нельзя редактировать — игнорируем
                 pass
             except Exception:
                 pass
@@ -274,7 +348,7 @@ async def send_message_broadcast(
         if delivered:
             sent += 1
 
-        # --- Bitrix: сохраняем именно то сообщение, которое рассылалось ---
+        # --- Bitrix comment (как у тебя было) ---
         try:
             deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
         except Exception:

@@ -289,7 +289,6 @@ class BitrixClient:
         }
         await self._post("crm.timeline.comment.add", payload)
 
-
     async def update_deal_phone(self, deal_id: str | int, phone: str) -> None:
         payload = {
             "id": int(deal_id),
@@ -317,3 +316,13 @@ class BitrixClient:
         # Bitrix возвращает список
         res = data.get("result", [])
         return res[0] if res else {}
+
+    # -------- КОНТАКТЫ --------
+
+    async def get_contact(self, contact_id: int | str) -> Dict[str, Any]:
+        """
+        crm.contact.get — вернёт result { ... "NAME": "Алексей Дмитриев", ... }
+        """
+        payload = {"id": int(contact_id)}
+        data = await self._post("crm.contact.get", payload)
+        return data.get("result", {}) or {}

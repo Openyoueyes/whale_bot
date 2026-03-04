@@ -1,5 +1,3 @@
-# app/bot/routers/admin/broadcast.py
-
 from __future__ import annotations
 
 from typing import Optional
@@ -37,8 +35,8 @@ class BroadcastStates(StatesGroup):
     choosing_pipeline = State()
     choosing_stage = State()
 
-    choosing_button_mode = State()  # ✅ новый шаг: кнопка теста или нет
-    entering_message = State()       # одно состояние для любого типа контента
+    choosing_button_mode = State()
+    entering_message = State()
 
 
 def _scope_kb() -> InlineKeyboardMarkup:
@@ -62,10 +60,6 @@ def _button_mode_kb() -> InlineKeyboardMarkup:
 
 
 async def _ask_button_mode(message_or_callback_message: Message, state: FSMContext) -> None:
-    """
-    Единый шаг после выбора охвата:
-    спрашиваем режим (кнопка теста / как есть / убрать).
-    """
     await state.set_state(BroadcastStates.choosing_button_mode)
     await message_or_callback_message.answer(
         "Выберите, что делать с кнопками в рассылке:\n\n"
@@ -88,16 +82,10 @@ async def cmd_broadcast_start(message: Message, state: FSMContext):
         "Отмена — кнопкой ниже.",
         reply_markup=cancel_inline_kb(),
     )
-    await message.answer(
-        "Кликните на нужный вариант:",
-        reply_markup=_scope_kb(),
-    )
+    await message.answer("Кликните на нужный вариант:", reply_markup=_scope_kb())
 
 
-@router.callback_query(
-    BroadcastStates.choosing_scope,
-    F.data.startswith("broadcast_scope:"),
-)
+@router.callback_query(BroadcastStates.choosing_scope, F.data.startswith("broadcast_scope:"))
 async def choose_scope(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
@@ -107,14 +95,11 @@ async def choose_scope(callback: CallbackQuery, state: FSMContext):
 
     _, _, scope_raw = callback.data.partition("broadcast_scope:")
 
-    # 1) Все воронки и стадии
     if scope_raw == "all":
         await state.update_data(scope=BroadcastScope.ALL.value, category_id=None, stage_id=None)
-        # ✅ вместо entering_message -> спрашиваем режим кнопок
         await _ask_button_mode(callback.message, state)
         return
 
-    # 2) По воронке
     if scope_raw == "pipeline":
         await state.update_data(scope=BroadcastScope.PIPELINE.value, stage_id=None)
         await state.set_state(BroadcastStates.choosing_pipeline)
@@ -147,7 +132,6 @@ async def choose_scope(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Список воронок:", reply_markup=kb)
         return
 
-    # 3) По стадии в выбранной воронке
     if scope_raw == "stage":
         await state.update_data(scope=BroadcastScope.STAGE.value)
         await state.set_state(BroadcastStates.choosing_pipeline)
@@ -164,10 +148,7 @@ async def choose_scope(callback: CallbackQuery, state: FSMContext):
 
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(
-                    text=f"{c['NAME']} (ID {c['ID']})",
-                    callback_data=f"broadcast_pipeline_for_stage:{c['ID']}",
-                )]
+                [InlineKeyboardButton(text=f"{c['NAME']} (ID {c['ID']})", callback_data=f"broadcast_pipeline_for_stage:{c['ID']}")]
                 for c in categories
             ]
         )
@@ -188,19 +169,14 @@ async def choose_scope(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Неизвестный режим рассылки. Запустите заново: /broadcast")
 
 
-@router.callback_query(
-    BroadcastStates.choosing_pipeline,
-    F.data.startswith("broadcast_pipeline:"),
-)
+@router.callback_query(BroadcastStates.choosing_pipeline, F.data.startswith("broadcast_pipeline:"))
 async def choose_pipeline_for_pipeline(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-
     if not callback.message:
         await state.clear()
         return
 
     _, _, id_str = callback.data.partition("broadcast_pipeline:")
-
     try:
         category_id = int(id_str)
     except ValueError:
@@ -209,25 +185,18 @@ async def choose_pipeline_for_pipeline(callback: CallbackQuery, state: FSMContex
         return
 
     await state.update_data(category_id=category_id, stage_id=None)
-
-    # ✅ спрашиваем режим кнопок
     await callback.message.answer(f"Охват: воронка ID={category_id}.")
     await _ask_button_mode(callback.message, state)
 
 
-@router.callback_query(
-    BroadcastStates.choosing_pipeline,
-    F.data.startswith("broadcast_pipeline_for_stage:"),
-)
+@router.callback_query(BroadcastStates.choosing_pipeline, F.data.startswith("broadcast_pipeline_for_stage:"))
 async def choose_pipeline_for_stage(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-
     if not callback.message:
         await state.clear()
         return
 
     _, _, id_str = callback.data.partition("broadcast_pipeline_for_stage:")
-
     try:
         category_id = int(id_str)
     except ValueError:
@@ -250,32 +219,21 @@ async def choose_pipeline_for_stage(callback: CallbackQuery, state: FSMContext):
 
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text=f"{s['NAME']} ({s['STATUS_ID']})",
-                callback_data=f"broadcast_stage:{s['STATUS_ID']}",
-            )]
+            [InlineKeyboardButton(text=f"{s['NAME']} ({s['STATUS_ID']})", callback_data=f"broadcast_stage:{s['STATUS_ID']}")]
             for s in stages
         ]
     )
 
     await callback.message.answer(
-        f"Выбрана воронка ID={category_id}.\n"
-        "Теперь выберите стадию:",
+        f"Выбрана воронка ID={category_id}.\nТеперь выберите стадию:",
         reply_markup=kb,
     )
-    await callback.message.answer(
-        "Отмена — кнопкой ниже.",
-        reply_markup=cancel_inline_kb(),
-    )
+    await callback.message.answer("Отмена — кнопкой ниже.", reply_markup=cancel_inline_kb())
 
 
-@router.callback_query(
-    BroadcastStates.choosing_stage,
-    F.data.startswith("broadcast_stage:"),
-)
+@router.callback_query(BroadcastStates.choosing_stage, F.data.startswith("broadcast_stage:"))
 async def choose_stage(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-
     if not callback.message:
         await state.clear()
         return
@@ -287,33 +245,22 @@ async def choose_stage(callback: CallbackQuery, state: FSMContext):
         return
 
     await state.update_data(stage_id=stage_id)
-
     data = await state.get_data()
     category_id = data.get("category_id")
 
     await callback.message.answer(f"Охват: стадия {stage_id} в воронке ID={category_id}.")
-
-    # ✅ спрашиваем режим кнопок
     await _ask_button_mode(callback.message, state)
 
 
-@router.callback_query(
-    BroadcastStates.choosing_button_mode,
-    F.data.startswith("broadcast_btn:"),
-)
+@router.callback_query(BroadcastStates.choosing_button_mode, F.data.startswith("broadcast_btn:"))
 async def choose_button_mode(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-
     if not callback.message:
         await state.clear()
         return
 
     _, _, mode_raw = callback.data.partition("broadcast_btn:")
 
-    # в broadcast_service:
-    # None = keep
-    # "add" = add quiz
-    # "remove" = remove
     quiz_button_mode = None
     if mode_raw == "add_quiz":
         quiz_button_mode = "add"
@@ -353,8 +300,6 @@ async def handle_broadcast_message(message: Message, state: FSMContext):
     category_id: Optional[int] = data.get("category_id")
     stage_id: Optional[str] = data.get("stage_id")
 
-    quiz_button_mode = data.get("quiz_button_mode")  # None | "add" | "remove"
-
     try:
         recipients = await collect_recipients(scope, category_id=category_id, stage_id=stage_id)
     except Exception:
@@ -367,6 +312,9 @@ async def handle_broadcast_message(message: Message, state: FSMContext):
 
     await message.answer(f"Запускаю рассылку. Получателей: {len(recipients)}.")
 
+    # ✅ шаблон для Telegram (любой тип): берём text или caption
+    telegram_template_text = (message.text or message.caption or "").strip()
+
     try:
         bitrix_body = format_message_for_bitrix(message)
 
@@ -376,12 +324,14 @@ async def handle_broadcast_message(message: Message, state: FSMContext):
             from_chat_id=message.chat.id,
             message_id=message.message_id,
 
-            # твой режим кнопки (добавим ниже, если ты введёшь его в FSM)
             quiz_button_mode=data.get("quiz_button_mode"),
             quiz_button_text=data.get("quiz_button_text") or "🎯 Пройти тест",
 
-            # ✅ вот это главное
             bitrix_message_body=bitrix_body,
+
+            # ✅ NEW: персонализация <name>
+            telegram_template_text=telegram_template_text,
+            original_reply_markup=message.reply_markup,  # важно, чтобы при edit не потерять кнопки
         )
     except Exception:
         await state.clear()
