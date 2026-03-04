@@ -454,7 +454,7 @@ async def quiz_choice(callback: CallbackQuery):
     choice = callback.data.split(":")[-1]
 
     # ✅ скрываем текст+кнопки на экране выбора направления
-    await _clear_quiz_message(callback, placeholder="⏳ Фиксирую выбор…")
+    await _clear_quiz_message(callback, placeholder="⏳ Фиксирую …")
 
     # ✅ атомарно записываем выбор (idempotent)
     first_choice = await _try_set_choice_once(tg_id, choice)
