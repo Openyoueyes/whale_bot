@@ -15,6 +15,6 @@ def get_prem_post_apply_keyboard() -> InlineKeyboardMarkup:
     """
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="robots:back")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="prem:back")],
         ]
     )

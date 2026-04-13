@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 
 from app.bot.keyboards.prem import get_prem_list_keyboard, get_prem_post_apply_keyboard
 from app.bot.keyboards.robots import get_robot_post_apply_keyboard
-from app.bot.routers.client.robots import safe_edit_text_or_caption
+from app.bot.routers.client.robots import safe_edit_text_or_caption, safe_callback_answer
 from app.config import PREM_IMAGE_FILE_ID
 from app.integrations.bitrix.client import BitrixClient
 from app.services.auto_followup_service import mark_activity
@@ -84,3 +84,39 @@ async def team_anton_apply(callback: CallbackQuery):
         reply_markup=get_prem_post_apply_keyboard(),  # ✅ только “Назад”
         parse_mode="HTML",
     )
+
+
+@router.callback_query(F.data == "robots:back")
+async def products_back(callback: CallbackQuery):
+    await safe_callback_answer(callback)
+
+    if not callback.message:
+        return
+
+    # Возвращаемся в список: желательно всегда с фото (если есть file_id)
+    if PREM_IMAGE_FILE_ID:
+        try:
+            media = InputMediaPhoto(
+                media=PREM_IMAGE_FILE_ID,
+                caption=PREM_LIST_TEXT,
+                parse_mode="HTML",
+            )
+            await callback.message.edit_media(
+                media=media,
+                reply_markup=get_prem_list_keyboard(),
+            )
+        except TelegramBadRequest:
+            # если вдруг текущее сообщение не позволяет edit_media — отправим новое
+            await callback.message.answer_photo(
+                photo=PREM_IMAGE_FILE_ID,
+                caption=PREM_LIST_TEXT,
+                reply_markup=get_prem_list_keyboard(),
+                parse_mode="HTML",
+            )
+    else:
+        await safe_edit_text_or_caption(
+            callback,
+            text=PREM_IMAGE_FILE_ID,
+            reply_markup=get_prem_list_keyboard(),
+            parse_mode="HTML",
+        )
