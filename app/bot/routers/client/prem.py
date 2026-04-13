@@ -81,7 +81,6 @@ async def team_anton_apply(callback: CallbackQuery):
             "📩 Менеджер свяжется с вами в ближайшее время и расскажет подробнее про формат сотрудничества.\n\n"
 
         ),
-        reply_markup=get_prem_post_apply_keyboard(),  # ✅ только “Назад”
         parse_mode="HTML",
     )
 
