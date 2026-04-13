@@ -86,7 +86,7 @@ async def team_anton_apply(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == "robots:back")
+@router.callback_query(F.data == "prem:back")
 async def products_back(callback: CallbackQuery):
     await safe_callback_answer(callback)
 
