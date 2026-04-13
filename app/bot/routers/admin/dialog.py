@@ -53,27 +53,15 @@ def _has_caption_capability(message: Message) -> bool:
 
 
 async def _send_with_manager_prefix(
-    *,
-    bot,
-    admin_message: Message,
-    target_chat_id: int,
+        *,
+        bot,
+        admin_message: Message,
+        target_chat_id: int,
 ) -> Tuple[bool, str]:
-    """
-    Универсальная отправка "как менеджер" с префиксом.
-    Возвращает (ok, log_text_for_bitrix)
-
-    Логика:
-    - Если это текст -> отправляем новый текст с префиксом
-    - Если медиа с caption -> копируем сообщение, но сначала меняем caption нельзя при copy_message.
-      Поэтому: отправляем префикс отдельным сообщением + копируем медиа как есть,
-      ИЛИ: переслать с новым caption можно только через resend (download not allowed) -> не делаем.
-      Компромисс: если есть caption, отправляем отдельное сообщение с префиксом+caption, затем копию медиа.
-    - Если медиа без caption -> отправляем префикс отдельным сообщением, затем копию медиа
-    """
     prefix = MANAGER_PREFIX
     body = _extract_text_or_caption(admin_message)
 
-    # Текстовое сообщение
+    # 1) Текст
     if admin_message.text:
         outgoing_text = f"{prefix}{body}"
         await bot.send_message(
@@ -84,27 +72,89 @@ async def _send_with_manager_prefix(
         )
         return True, outgoing_text
 
-    # Любой НЕ-текст (фото/видео/voice/док/стикер/кружок/и т.д.)
-    # 1) Сначала отдельным сообщением префикс (и caption/описание если было)
-    if body:
-        meta_text = f"{prefix}{body}"
-    else:
-        meta_text = f"{prefix}(медиа)"
+    # 2) Медиа с caption-возможностью: отправляем ОДНИМ сообщением (file_id + новый caption)
+    if _has_caption_capability(admin_message):
+        caption = body or "(медиа)"
+        new_caption = f"{prefix}{caption}"
 
+        # PHOTO (берём самый большой размер)
+        if admin_message.photo:
+            file_id = admin_message.photo[-1].file_id
+            await bot.send_photo(
+                chat_id=target_chat_id,
+                photo=file_id,
+                caption=new_caption,
+                parse_mode=ParseMode.HTML,
+            )
+            return True, new_caption
+
+        # VIDEO
+        if admin_message.video:
+            await bot.send_video(
+                chat_id=target_chat_id,
+                video=admin_message.video.file_id,
+                caption=new_caption,
+                parse_mode=ParseMode.HTML,
+            )
+            return True, new_caption
+
+        # DOCUMENT
+        if admin_message.document:
+            await bot.send_document(
+                chat_id=target_chat_id,
+                document=admin_message.document.file_id,
+                caption=new_caption,
+                parse_mode=ParseMode.HTML,
+            )
+            return True, new_caption
+
+        # ANIMATION (gif)
+        if admin_message.animation:
+            await bot.send_animation(
+                chat_id=target_chat_id,
+                animation=admin_message.animation.file_id,
+                caption=new_caption,
+                parse_mode=ParseMode.HTML,
+            )
+            return True, new_caption
+
+        # AUDIO (музыка/аудиофайл)
+        if admin_message.audio:
+            await bot.send_audio(
+                chat_id=target_chat_id,
+                audio=admin_message.audio.file_id,
+                caption=new_caption,
+                parse_mode=ParseMode.HTML,
+            )
+            return True, new_caption
+
+        # если внезапно не попали ни в один тип — fallback
+        await bot.send_message(
+            chat_id=target_chat_id,
+            text=new_caption,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+        await bot.copy_message(
+            chat_id=target_chat_id,
+            from_chat_id=admin_message.chat.id,
+            message_id=admin_message.message_id,
+        )
+        return True, new_caption
+
+    # 3) Медиа БЕЗ caption (voice/video_note/sticker/etc) — тут 2 сообщения норм
+    meta_text = f"{prefix}{body}" if body else f"{prefix}(медиа)"
     await bot.send_message(
         chat_id=target_chat_id,
         text=meta_text,
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
     )
-
-    # 2) Затем копируем оригинал 1-в-1 (универсально)
     await bot.copy_message(
         chat_id=target_chat_id,
         from_chat_id=admin_message.chat.id,
         message_id=admin_message.message_id,
     )
-
     return True, meta_text
 
 

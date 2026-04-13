@@ -9,3 +9,12 @@ def get_prem_list_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
+def get_prem_post_apply_keyboard() -> InlineKeyboardMarkup:
+    """
+    Клавиатура после отправки заявки: только 'Назад'
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="robots:back")],
+        ]
+    )

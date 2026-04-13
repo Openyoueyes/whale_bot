@@ -5,11 +5,17 @@ from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
 
-from app.bot.keyboards.prem import get_prem_list_keyboard
+from app.bot.keyboards.prem import get_prem_list_keyboard, get_prem_post_apply_keyboard
+from app.bot.keyboards.robots import get_robot_post_apply_keyboard
+from app.bot.routers.client.robots import safe_edit_text_or_caption
 from app.config import PREM_IMAGE_FILE_ID
+from app.integrations.bitrix.client import BitrixClient
+from app.services.auto_followup_service import mark_activity
+from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
 from app.services.prem_service import create_prem_request
 
 router = Router(name="client-prem")
+bitrix_client = BitrixClient()
 
 PREM_LIST_TEXT = (
     "🔥 <b>WhaleTrade Premium — система профессиональной торговли на Forex</b>\n\n"
@@ -59,29 +65,22 @@ async def team_anton_apply(callback: CallbackQuery):
         source="Премиум / Заявка / Кнопка в боте",
     )
 
-    confirm_text = (
-        "✅ <b>Спасибо за интерес!</b>\n\n"
-        "Менеджер свяжется с вами в ближайшее время."
-    )
-
-    if not callback.message:
-        return
-
     try:
-        # если сообщение с фото или видео — редактируем caption
-        if callback.message.photo or callback.message.video:
-            await callback.message.edit_caption(
-                caption=confirm_text,
-                parse_mode="HTML",
-            )
-        else:
-            await callback.message.edit_text(
-                confirm_text,
-                parse_mode="HTML",
-            )
-    except TelegramBadRequest:
-        # fallback — отправляем новое сообщение
-        await callback.message.answer(
-            confirm_text,
-            parse_mode="HTML",
-        )
+        await mark_activity(callback.from_user.id)
+    except Exception:
+        pass
+    # ✅ реакция на заявку: если клиент был в “плохих” стадиях — перекидываем в “1 касание”
+    try:
+        await move_to_first_touch_if_needed(bitrix_client, callback.from_user.id)
+    except Exception:
+        pass
+    await safe_edit_text_or_caption(
+        callback,
+        text=(
+            "✅✅✅ <b>Заявка принята</b>\n\n"
+            "📩 Менеджер свяжется с вами в ближайшее время и расскажет подробнее про формат сотрудничества.\n\n"
+
+        ),
+        reply_markup=get_prem_post_apply_keyboard(),  # ✅ только “Назад”
+        parse_mode="HTML",
+    )
