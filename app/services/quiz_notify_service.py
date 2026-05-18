@@ -83,7 +83,7 @@ async def send_quiz_result_notification(
         answers_text: str,
 ) -> None:
     deal_id = await _get_deal_id_for_tg(tg_id)
-    tag_value: await _get_deal_tag_for_tg(tg_id)
+    tag_value = await _get_deal_tag_for_tg(tg_id)
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
@@ -136,7 +136,7 @@ async def send_quiz_choice_notification(
         choice_text: str,
 ) -> None:
     deal_id = await _get_deal_id_for_tg(tg_id)
-    tag_value: await _get_deal_tag_for_tg(tg_id)
+    tag_value = await _get_deal_tag_for_tg(tg_id)
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
