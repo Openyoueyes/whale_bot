@@ -40,6 +40,7 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
         deal = None
 
     deal_id: str | None = str(deal["ID"]) if deal else None
+    tag_value: str | None = str(deal["UF_CRM_1745855127"]) if deal else None
     responsible_text = "не назначен"
     deal_link_text = "Сделка не найдена"
 
@@ -68,10 +69,12 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
         comment = (
             "Заявка из Telegram бота (Роботы)\n\n"
             f"Источник: {source}\n"
+            f"Тег: {tag_value or 'нет тега'}\n"
             f"TG ID: {tg_id}\n"
             f"Username: @{username}\n"
             f"Имя: {full_name}\n"
             f"Ответственный: {responsible_text}"
+
         )
         try:
             await bitrix_client.add_deal_timeline_comment(deal_id, comment)
@@ -82,6 +85,7 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
     notify_text = (
         "🆕 <b>Новая заявка (Роботы)</b>\n\n"
         f"{deal_link_text}\n\n"
+        f"Тег: {tag_value or 'нет тега'}\n"
         f"<b>Ответственный:</b> {responsible_text}\n"
         f"<b>Источник:</b> {source}\n"
         f"<b>TG ID:</b> <code>{tg_id}</code>\n"

@@ -69,6 +69,7 @@ async def process_client_message(bot: Bot, message: Message) -> None:
         deal = None
 
     deal_id: str | None = str(deal["ID"]) if deal else None
+    tag_value: str | None = str(deal["UF_CRM_1745855127"]) if deal else None
     deal_link_text = "Сделка не найдена"
     responsible_text = "не назначен"
 
@@ -112,6 +113,7 @@ async def process_client_message(bot: Bot, message: Message) -> None:
         "----------------------------------------\n"
         f"{deal_link_text}\n"
         "----------------------------------------\n"
+        f"Тег: {tag_value or 'нет тега'}\n"
         f"Ответственный: {responsible_text}\n"
         f"TG ID: <code>{tg_id}</code>\n"
         f"Username: @{from_user.username or 'нет'}\n"

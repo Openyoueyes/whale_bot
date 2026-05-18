@@ -7,7 +7,7 @@ from typing import Tuple
 from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from app.config import GROUP_CHAT_MESSAGES_BOT_ID, ADMIN_IDS
+from app.config import GROUP_CHAT_MESSAGES_BOT_ID, ADMIN_IDS, BITRIX_FIELD_TAG_DEAL
 from app.integrations.bitrix.client import BitrixClient
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,16 @@ async def _get_deal_id_for_tg(tg_id: int) -> str | None:
         deal = None
     if deal and deal.get("ID"):
         return str(deal["ID"])
+    return None
+
+
+async def _get_deal_tag_for_tg(tg_id: int) -> str | None:
+    try:
+        deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
+    except Exception:
+        deal = None
+    if deal and deal.get(BITRIX_FIELD_TAG_DEAL):
+        return str(deal[BITRIX_FIELD_TAG_DEAL])
     return None
 
 
@@ -63,16 +73,17 @@ async def _get_deal_link_and_responsible(deal_id: str | None) -> Tuple[str, str]
 
 
 async def send_quiz_result_notification(
-    *,
-    bot: Bot,
-    tg_id: int,
-    username: str | None,
-    full_name: str,
-    level: str,
-    score: int,
-    answers_text: str,
+        *,
+        bot: Bot,
+        tg_id: int,
+        username: str | None,
+        full_name: str,
+        level: str,
+        score: int,
+        answers_text: str,
 ) -> None:
     deal_id = await _get_deal_id_for_tg(tg_id)
+    tag_value: await _get_deal_tag_for_tg(tg_id)
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
@@ -81,6 +92,7 @@ async def send_quiz_result_notification(
         f"{deal_link_text}\n"
         "----------------------------------------\n"
         f"<b>Ответственный:</b> {responsible_text}\n"
+        f"Тег: {tag_value or 'нет тега'}\n"
         f"<b>TG ID:</b> <code>{tg_id}</code>\n"
         f"<b>Username:</b> @{username or 'нет'}\n"
         f"<b>Имя:</b> {full_name}\n\n"
@@ -116,14 +128,15 @@ async def send_quiz_result_notification(
 
 
 async def send_quiz_choice_notification(
-    *,
-    bot: Bot,
-    tg_id: int,
-    username: str | None,
-    full_name: str,
-    choice_text: str,
+        *,
+        bot: Bot,
+        tg_id: int,
+        username: str | None,
+        full_name: str,
+        choice_text: str,
 ) -> None:
     deal_id = await _get_deal_id_for_tg(tg_id)
+    tag_value: await _get_deal_tag_for_tg(tg_id)
     deal_link_text, responsible_text = await _get_deal_link_and_responsible(deal_id)
 
     text = (
@@ -131,6 +144,7 @@ async def send_quiz_choice_notification(
         "----------------------------------------\n"
         f"{deal_link_text}\n"
         "----------------------------------------\n"
+        f"Тег: {tag_value or 'нет тега'}\n"
         f"<b>Ответственный:</b> {responsible_text}\n"
         f"<b>TG ID:</b> <code>{tg_id}</code>\n"
         f"<b>Username:</b> @{username or 'нет'}\n"

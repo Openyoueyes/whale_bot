@@ -269,6 +269,7 @@ class BitrixClient:
                 "STAGE_ID",
                 "CATEGORY_ID",
                 BITRIX_FIELD_TG_ID_DEAL,
+                BITRIX_FIELD_TAG_DEAL
             ],
         }
         data = await self._post("crm.deal.list", payload)
