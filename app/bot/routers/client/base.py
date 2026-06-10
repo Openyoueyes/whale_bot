@@ -1,33 +1,35 @@
 # app/bot/routers/client/base.py
 from __future__ import annotations
 
-import asyncio
-from typing import Set
+import logging
 
-from aiogram import Router, F, Bot
+from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.filters.command import CommandObject
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message, User
 
+from app.bot.keyboards.client import get_main_menu_keyboard
 from app.bot.keyboards.quiz import get_quiz_start_inline_kb
-from app.config import (
-    ADMIN_IDS, MAIN_CHANNEL_ID, WELCOME_PHOTO_FILE_ID
-)
+from app.config import WELCOME_PHOTO_FILE_ID
 from app.db.session import async_session_maker
 from app.services.auto_followup_service import mark_activity, mark_start
+from app.services.bitrix_service import sync_user_with_bitrix_on_start
 from app.services.dialog_service import process_client_message
+from app.services.subscription_service import (
+    has_subscription_access,
+    send_subscription_gate_callback,
+    send_subscription_gate_message,
+)
 from app.services.triggers_service import (
     get_trigger_by_keyword,
-    send_trigger_reply,
     normalize_keyword,
+    send_trigger_reply,
 )
 from app.services.user_service import (
     get_or_create_tg_user,
     process_referral_tag_for_user,
 )
-from app.services.bitrix_service import sync_user_with_bitrix_on_start
-from app.bot.keyboards.client import get_main_menu_keyboard, get_subscribe_inline_keyboard
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -40,63 +42,86 @@ MAIN_MENU_TEXTS = {
 
 router = Router(name="client-base")
 
-# Анти-дубль: не планируем много напоминаний одному и тому же юзеру
-_scheduled_subscribe_reminders: Set[int] = set()
 
-
-def _safe_first_name(message: Message) -> str:
+def _safe_first_name_from_user(user: User | None) -> str:
     """
     Имя для приветствия.
-    Берём first_name из Telegram, если пусто — 'друг'.
+    Берём first_name из Telegram, если пусто — 'трейдер'.
     """
-    u = message.from_user
-    name = (u.first_name or "").strip() if u else ""
+    name = (user.first_name or "").strip() if user else ""
     return name or "трейдер"
 
 
-def _is_subscribed_status(status: str | None) -> bool:
-    # Для канала: member/administrator/creator = подписан
-    return status in ("member", "administrator", "creator")
+def _build_welcome_caption(first_name: str) -> str:
+    return (
+        f"👋 <b>{first_name}</b>, вас приветствует команда WhaleTrade 🐳\n\n"
+        "Спасибо за интерес к нашей работе!\n\n"
+        "Мы торгуем на рынке <b>Forex</b>.\n"
+        "Ищем партнеров для совместных идей и их реализаций.\n\n"
+        "<b>Два направления сотрудничества:</b>\n\n"
+        "1️⃣ Готовые точки входа с аналитикой и сопровождением — WhaleTrade Профит.\n\n"
+        "2️⃣ Торговые роботы WhaleTrade — статистика с 2022 года.\n\n"
+        "<b>Отзывы работы с нами: @WhaleInvestmentTrading</b>\n\n"
+        "📌 Пройдите <b>короткий проф-тест из 5 вопросов</b> и определите направление, "
+        "которое подходит именно вам 👇"
+    )
 
 
-async def _is_user_subscribed(bot: Bot, user_id: int) -> bool:
-    try:
-        member = await bot.get_chat_member(chat_id=MAIN_CHANNEL_ID, user_id=user_id)
-        return _is_subscribed_status(getattr(member, "status", None))
-    except Exception:
-        # Если не смогли проверить — считаем "не подписан", чтобы напоминание сработало
-        return False
+async def _send_welcome_flow(message: Message) -> None:
+    first_name = _safe_first_name_from_user(message.from_user)
+    caption = _build_welcome_caption(first_name)
 
-
-async def _send_subscribe_reminder(bot: Bot, chat_id: int, user_id: int, first_name: str) -> None:
-    """
-    first_name передаём внутрь, чтобы не дёргать Telegram API.
-    """
-    try:
-        await asyncio.sleep(240)  # 5 минут
-
-        # Повторная проверка перед отправкой
-        if await _is_user_subscribed(bot, user_id):
-            return
-
-        # если не хочешь имя в напоминании — убери первую строку
-        caption = (
-            f"{first_name}, кажется, вы ещё не подписались на наш основной канал.\n\n"
-            "Подпишитесь — там много обучающей и полезной информации, разборы сделок и материалы.\n\n"
-            "👇 Нажми кнопку ниже, чтобы подписаться:"
+    if WELCOME_PHOTO_FILE_ID:
+        await message.answer_photo(
+            photo=WELCOME_PHOTO_FILE_ID,
+            caption=caption,
+            reply_markup=get_quiz_start_inline_kb(),
+            parse_mode="HTML",
         )
-
-        await bot.send_message(
-            chat_id=chat_id,
-            text=caption,
-            reply_markup=get_subscribe_inline_keyboard(),
+    else:
+        await message.answer(
+            caption,
+            reply_markup=get_quiz_start_inline_kb(),
+            parse_mode="HTML",
             disable_web_page_preview=True,
         )
 
-    except Exception:
-        pass
-    finally:
-        _scheduled_subscribe_reminders.discard(user_id)
+    await message.answer(
+        "\u2060",
+        reply_markup=get_main_menu_keyboard(),
+    )
+
+
+async def _send_welcome_flow_to_callback_chat(callback: CallbackQuery) -> None:
+    if not callback.message:
+        return
+
+    first_name = _safe_first_name_from_user(callback.from_user)
+    caption = _build_welcome_caption(first_name)
+    chat_id = callback.message.chat.id
+
+    if WELCOME_PHOTO_FILE_ID:
+        await callback.bot.send_photo(
+            chat_id=chat_id,
+            photo=WELCOME_PHOTO_FILE_ID,
+            caption=caption,
+            reply_markup=get_quiz_start_inline_kb(),
+            parse_mode="HTML",
+        )
+    else:
+        await callback.bot.send_message(
+            chat_id=chat_id,
+            text=caption,
+            reply_markup=get_quiz_start_inline_kb(),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+
+    await callback.bot.send_message(
+        chat_id=chat_id,
+        text="\u2060",
+        reply_markup=get_main_menu_keyboard(),
+    )
 
 
 @router.message(CommandStart())
@@ -141,79 +166,37 @@ async def cmd_start(message: Message, command: CommandObject):
     except Exception:
         pass
 
-    # ✅ персонализация
-    first_name = _safe_first_name(message)
+    # 4) Доступ к боту только после подписки
+    if not await has_subscription_access(message.bot, from_user.id):
+        await send_subscription_gate_message(message)
+        return
 
-    caption = (
-        f"👋 <b>{first_name}</b>, вас приветствует команда WhaleTrade 🐳\n\n"
-        f"Спасибо за интерес к нашей работе!\n\n"
-        "Мы торгуем на рынке <b>Forex</b>.\n"
-        "Ищем партнеров для совместных идей и их реализаций.\n\n"
-        "<b>Два напраления сотрудничества:</b>\n\n"
-        "1️⃣Готовые точки входа с аналитикой и сопровождением(WhaleTade Профит).\n\n"
-        "2️⃣Торговые роботы WhaleTrade(статистика с 2022 года).\n\n"
+    await _send_welcome_flow(message)
 
-        "<b>Отзывы работы с нами: @WhaleInvestmentTrading</b>\n\n"
-       
-        "📣 Так же <b>подпишитесь</b> на наш открытый канал там много разборов и полезной информации:\nhttps://t.me/+on4x8BSxxv5hZmYy\n\n"
 
-        "📌Пройдите <b>короткий проф-тест из 5-ти вопросов</b> и определите направление которое подходит именно вам👇"
-    )
+@router.callback_query(F.data == "subscription:check")
+async def subscription_check(callback: CallbackQuery):
+    if not callback.from_user:
+        return
 
-    # 1) Видео + текст (caption) + инлайн-кнопка
-    if WELCOME_PHOTO_FILE_ID:
-        await message.answer_photo(
-            photo=WELCOME_PHOTO_FILE_ID,
-            caption=caption,
-            reply_markup=get_quiz_start_inline_kb(),
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-        )
-    else:
-        await message.answer(
-            caption,
-            reply_markup=get_quiz_start_inline_kb(),
-            parse_mode="HTML",
-            disable_web_page_preview=True,
-        )
+    if not await has_subscription_access(callback.bot, callback.from_user.id):
+        await send_subscription_gate_callback(callback, subscription_not_found=True)
+        return
 
-    # 2) Отдельным сообщением показываем реплай-меню
-    await message.answer(
-        "\u2060",
-        reply_markup=get_main_menu_keyboard(),
-    )
+    try:
+        await callback.answer("✅ Подписка подтверждена")
+    except Exception:
+        pass
 
-    # 3) Планируем напоминание через 5 минут (если НЕ админ)
-    if from_user.id not in ADMIN_IDS:
-        should_schedule = True
+    if callback.message:
         try:
-            if await _is_user_subscribed(message.bot, from_user.id):
-                should_schedule = False
+            await callback.message.delete()
+        except TelegramBadRequest:
+            pass
         except Exception:
-            should_schedule = True
+            pass
 
-        if should_schedule and from_user.id not in _scheduled_subscribe_reminders:
-            _scheduled_subscribe_reminders.add(from_user.id)
-
-            _task = asyncio.create_task(
-                _send_subscribe_reminder(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    user_id=from_user.id,
-                    first_name=first_name,
-                )
-            )
-
-
-def _is_menu_or_command(message: Message) -> bool:
-    t = (message.text or "").strip()
-    if not t:
-        return False
-    if t in MAIN_MENU_TEXTS:
-        return True
-    if t.startswith("/"):
-        return True
-    return False
+    await _send_welcome_flow_to_callback_chat(callback)
 
 
 def _trigger_key_from_message(message: Message) -> str:
@@ -234,8 +217,6 @@ def _trigger_key_from_message(message: Message) -> str:
     ~F.contact,
 )
 async def any_client_message(message: Message):
-    if message.from_user and message.from_user.id in ADMIN_IDS:
-        return
     try:
         await mark_activity(message.from_user.id)
     except Exception:

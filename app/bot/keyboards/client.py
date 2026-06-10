@@ -33,7 +33,7 @@ def get_main_menu_keyboard() -> ReplyKeyboardMarkup:
 
 def get_subscribe_inline_keyboard() -> InlineKeyboardMarkup:
     """
-    Инлайн-клавиатура с кнопкой подписки на канал.
+    Инлайн-клавиатура для открытия доступа через подписку.
     """
     keyboard = [
         [
@@ -41,7 +41,13 @@ def get_subscribe_inline_keyboard() -> InlineKeyboardMarkup:
                 text="📣 Подписаться на канал",
                 url=CHANNEL_URL,
             )
-        ]
+        ],
+        [
+            InlineKeyboardButton(
+                text="✅ Я подписался — открыть доступ",
+                callback_data="subscription:check",
+            )
+        ],
     ]
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
