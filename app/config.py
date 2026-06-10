@@ -36,6 +36,7 @@ BITRIX_FIELD_TAG_DEAL: str = env.str("BITRIX_FIELD_TAG_DEAL")
 
 # --- VIDEO поля ---
 WELCOME_PHOTO_FILE_ID = env.str("WELCOME_PHOTO_FILE_ID", default="")
+SUBSCRIPTION_GATE_PHOTO_PATH = env.str("SUBSCRIPTION_GATE_PHOTO_PATH", default="app/bot/assets/subscription_gate.png")
 BONUS_IMAGE_FILE_ID = env.str("BONUS_IMAGE_FILE_ID", default="")
 MANAGER_CONTACT_IMAGE_FILE_ID = env.str("MANAGER_CONTACT_IMAGE_FILE_ID", default="")
 PREM_IMAGE_FILE_ID = env.str("PREM_IMAGE_FILE_ID", default="")

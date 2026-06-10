@@ -17,7 +17,9 @@ from app.services.auto_followup_service import mark_activity, mark_start
 from app.services.bitrix_service import sync_user_with_bitrix_on_start
 from app.services.dialog_service import process_client_message
 from app.services.subscription_service import (
+    cancel_subscription_gate_reminder,
     has_subscription_access,
+    schedule_subscription_gate_reminder,
     send_subscription_gate_callback,
     send_subscription_gate_message,
 )
@@ -168,7 +170,13 @@ async def cmd_start(message: Message, command: CommandObject):
 
     # 4) Доступ к боту только после подписки
     if not await has_subscription_access(message.bot, from_user.id):
-        await send_subscription_gate_message(message)
+        await send_subscription_gate_message(message, with_photo=True)
+        schedule_subscription_gate_reminder(
+            message.bot,
+            user_id=from_user.id,
+            chat_id=message.chat.id,
+            delay_seconds=50,
+        )
         return
 
     await _send_welcome_flow(message)
@@ -182,6 +190,8 @@ async def subscription_check(callback: CallbackQuery):
     if not await has_subscription_access(callback.bot, callback.from_user.id):
         await send_subscription_gate_callback(callback, subscription_not_found=True)
         return
+
+    cancel_subscription_gate_reminder(callback.from_user.id)
 
     try:
         await callback.answer("✅ Подписка подтверждена")
