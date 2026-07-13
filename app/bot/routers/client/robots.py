@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
 
 from app.bot.keyboards.robots import get_robot_list_keyboard, get_robot_detail_keyboard, get_robot_post_apply_keyboard
-from app.config import QUANT_IMAGE_FILE_ID, ROBOTS_IMAGE_FILE_ID, AI_IMAGE_FILE_ID, SAFE_IMAGE_FILE_ID
+from app.config import BREAKOUTGOLD_IMAGE_FILE_ID, ROBOTS_IMAGE_FILE_ID, AI_IMAGE_FILE_ID
 from app.integrations.bitrix.client import BitrixClient
 from app.services.auto_followup_service import mark_activity
 from app.services.robots_service import create_product_request
@@ -79,38 +79,9 @@ ROBOTS_LIST_TEXT = (
     "🤖 <b>Наши роботы</b> - это актуальные алгоритмы стратгеии, постоянная оптимизция, "
     "вариации настроек, прозрачная статистика с 2022 года на независимых мониторингах.\n\n"
     "<b>1.WhaleTrade AI(основной)</b> \n\n"
-    "<b>2.WhaleTrade SafeTrend(новый)</b>\n\n"
-    "<b>3.WhaleTrade QUANT - в разработке(золото)</b>\n\n"
+    "<b>2.WT_BREAKOUTGOLD(золото)</b>\n\n"
     "Выберите робота который вас интересует:"
 )
-
-
-def _quant_text() -> str:
-    return (
-        "⚡ <b>WhaleTrade QUANT — импульсный робот для резких движений</b>\n\n"
-        "Автоматический алгоритм, который заходит в рынок только при ускорении цены.\n"
-        "Без уровней, без трендовых фильтров — только работа с импульсом.\n\n"
-        "🔎 <b>Принцип работы:</b>\n"
-        "Если цена за короткое время проходит заданную дистанцию —\n"
-        "робот фиксирует импульс и входит в движение.\n"
-        "Вверх — BUY, вниз — SELL.\n\n"
-        "🥇 <b>Особенно эффективен на XAUUSD (золото)</b>\n"
-        "Золото часто даёт резкие ускорения и мощные новостные выносы,\n"
-        "что идеально подходит для импульсной логики.\n\n"
-        "⚙️ <b>Сопровождение позиции:</b>\n"
-        "🔵 Динамический трейлинг-стоп\n"
-        "🔵 Возможность открытия дополнительной позиции при продолжении импульса\n"
-        "🔵 Закрытие серии по общей цели прибыли\n\n"
-
-        "🛡️ <b>Контроль риска:</b>\n"
-        "🔒 Ограничение просадки в % или фиксированной суммой\n"
-        "🔒 Контроль спреда\n"
-        "🔒 Ограничение времени торговли\n"
-        "🔒 Возможность остановки до следующего дня\n\n"
-
-        "📈 Лучший инструмент — XAUUSD.\n\n"
-
-    )
 
 
 def _ai_text() -> str:
@@ -140,32 +111,25 @@ def _ai_text() -> str:
     )
 
 
-def _safe_text() -> str:
+def _breakoutgold_text() -> str:
     return (
-        "🤖 <b>WT_SAFETREND — трендовый робот с жёсткой фильтрацией флета</b>\n\n"
-        "Автоматическая система для Forex, "
-        "которая зарабатывает только в реальном тренде и не торгует в боковике.\n\n"
-        "🔎 <b>Основная идея:</b>\n"
-        "Зарабатывать в тренде — и не терять во флете.\n\n"
-        "⚙️ <b>Как работает логика:</b>\n"
-        "🔵 Определяет направление по EMA\n"
-        "🔵 Блокирует торговлю при слабом рынке (ADX-фильтр)\n"
-        "🔵 Делает паузу при смене тренда\n"
-        "🔵 Проверяет обновление экстремумов перед входом\n\n"
-        "🎯 <b>SL и TP рассчитываются от рынка</b>\n"
-        "Без раздувания целей при росте депозита.\n"
-        "Используются ограничения минимальных и максимальных значений.\n\n"
+        "🥇 <b>WT_BREAKOUTGOLD — советник пробоя сессии для XAUUSD</b>\n\n"
+        "Профессиональный робот для MetaTrader 5, созданный специально под золото. "
+        "Он измеряет диапазон азиатской сессии и торгует пробой на импульсе открытия Лондона.\n\n"
+        "⚙️ <b>Как работает:</b>\n"
+        "🔵 Фиксирует High/Low азиатского диапазона\n"
+        "🔵 Ставит BuyStop и SellStop по OCO-логике\n"
+        "🔵 После срабатывания одного ордера второй удаляется\n"
+        "🔵 Закрывает позиции и удаляет ордера к концу дня\n\n"
         "🛡️ <b>Контроль риска:</b>\n"
-        "🔒 Лимит сделок в день\n"
-        "🔒 Пауза после серии убытков\n"
-        "🔒 Защита от переторговки\n"
-        "🔒 Настройка риска в % от депозита\n\n"
-        "📈 Рекомендуемые активы: XAUUSD, GBPJPY, AUDJPY, USDCAD\n"
-        "⏱ Оптимальный таймфрейм: H1 (допустимо H4)\n"
-        "💰 Рекомендуемый риск: 0.4–0.5% на сделку\n\n"
-        "WT_SAFETREND — это не агрессивная стратегия.\n"
-        "Это системная, спокойная торговля с акцентом на защиту капитала.\n\n"
-        "✉️ Хотите получить пресеты под свой депозит и протестировать робота бесплатно?\n"
+        "🔒 Stop Loss на противоположной границе диапазона\n"
+        "🔒 Фиксированный лот или риск % от баланса\n"
+        "🔒 Фильтр минимального диапазона и отступ входа\n"
+        "🔒 Работа только по своему символу и magic number\n\n"
+        "📈 Инструмент: XAUUSD\n"
+        "⏱ Логика: азиатский диапазон → пробой → сопровождение до закрытия дня\n"
+        "📊 Тесты 2024-2026: 611 сделок, winrate около 56%, Profit Factor до 2.09 на out-of-sample.\n\n"
+        "✉️ Получить мониринг вместе с роботом и подробное видео + методичку описания ⬇️⬇️⬇️⬇️\n"
     )
 
 
@@ -218,7 +182,7 @@ async def products_back(callback: CallbackQuery):
     else:
         await safe_edit_text_or_caption(
             callback,
-            text=ROBOTS_IMAGE_FILE_ID,
+            text=ROBOTS_LIST_TEXT,
             reply_markup=get_robot_list_keyboard(),
             parse_mode="HTML",
         )
@@ -250,54 +214,28 @@ async def robots_ai(callback: CallbackQuery):
         )
 
 
-@router.callback_query(F.data == "robots:wt_safe")
-async def robots_safe(callback: CallbackQuery):
+@router.callback_query(F.data == "robots:wt_breakoutgold")
+async def robots_breakoutgold(callback: CallbackQuery):
     await safe_callback_answer(callback)
 
     if not callback.message:
         return
 
-    if SAFE_IMAGE_FILE_ID:
+    if BREAKOUTGOLD_IMAGE_FILE_ID:
         media = InputMediaPhoto(
-            media=SAFE_IMAGE_FILE_ID,
-            caption=_safe_text(),
+            media=BREAKOUTGOLD_IMAGE_FILE_ID,
+            caption=_breakoutgold_text(),
             parse_mode="HTML",
         )
         await callback.message.edit_media(
             media=media,
-            reply_markup=get_robot_detail_keyboard("wt_safe"),
+            reply_markup=get_robot_detail_keyboard("wt_breakoutgold"),
         )
     else:
         await safe_edit_text_or_caption(
             callback,
-            text=_safe_text(),
-            reply_markup=get_robot_detail_keyboard("wt_safe"),
-            parse_mode="HTML",
-        )
-
-
-@router.callback_query(F.data == "robots:wt_quant")
-async def robots_quant(callback: CallbackQuery):
-    await safe_callback_answer(callback)
-
-    if not callback.message:
-        return
-
-    if QUANT_IMAGE_FILE_ID:
-        media = InputMediaPhoto(
-            media=QUANT_IMAGE_FILE_ID,
-            caption=_quant_text(),
-            parse_mode="HTML",
-        )
-        await callback.message.edit_media(
-            media=media,
-            reply_markup=get_robot_detail_keyboard("wt_quant"),
-        )
-    else:
-        await safe_edit_text_or_caption(
-            callback,
-            text=_quant_text(),
-            reply_markup=get_robot_detail_keyboard("wt_quant"),
+            text=_breakoutgold_text(),
+            reply_markup=get_robot_detail_keyboard("wt_breakoutgold"),
             parse_mode="HTML",
         )
 
@@ -334,14 +272,14 @@ async def robots_ai_apply(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == "robots:wt_safe:apply")
-async def robots_safe_apply(callback: CallbackQuery):
+@router.callback_query(F.data == "robots:wt_breakoutgold:apply")
+async def robots_breakoutgold_apply(callback: CallbackQuery):
     await safe_callback_answer(callback)
 
     await create_product_request(
         bot=callback.bot,
         tg_user=callback.from_user,
-        source="Роботы / WT SAFE / Получить доступ",
+        source="Роботы / WT BREAKOUTGOLD / Получить доступ",
     )
     try:
         await mark_activity(callback.from_user.id)
