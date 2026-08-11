@@ -12,6 +12,7 @@ BAD_STATUS_IDS = {
     "UC_OMS9IC",
 
     "UC_6OBDV3",
+    "UC_ARYLDU"
 }
 
 FIRST_TOUCH_STATUS_ID = "PREPARATION"  # если у тебя 1 касание = другой статус, поменяй тут
