@@ -26,29 +26,23 @@ if BASE_DIR not in sys.path:
 # --- Импорт приложения и моделей ---
 from app.config import DATABASE_URL
 from app.db.base import Base  # DeclarativeBase
+from app.db.url import to_async_url, to_sync_url
 from app.db import models  # noqa: F401  # чтобы модели повесились на Base.metadata
 
 target_metadata = Base.metadata
 
 
 def get_async_url() -> str:
-    """
-    Преобразуем sync URL (psycopg2) в async URL (asyncpg).
-    DATABASE_URL = postgresql+psycopg2://...
-    """
-    return DATABASE_URL.replace("psycopg2", "asyncpg")
+    """Async-URL (asyncpg) — та же нормализация, что и в приложении."""
+    return to_async_url(DATABASE_URL)
 
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
 
-    url = get_async_url()
-    # В оффлайне Alembic работает с sync-URL, поэтому убираем +asyncpg
-    # postgresql+asyncpg -> postgresql
-    sync_url = url.replace("+asyncpg", "")
-
+    # В оффлайне Alembic работает с sync-URL, драйвер не нужен.
     context.configure(
-        url=sync_url,
+        url=to_sync_url(DATABASE_URL),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

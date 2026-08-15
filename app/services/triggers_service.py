@@ -12,6 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from app.db.models import TriggerReply
+from app.services.message_formatters import truncate_for_bitrix
+
+# Как называть тип вложения в комментарии Bitrix.
+_CONTENT_TYPE_LABELS = {
+    "photo": "фото",
+    "video": "видео",
+    "document": "документ",
+    "voice": "голосовое",
+    "audio": "аудио",
+    "sticker": "стикер",
+}
 
 
 def normalize_keyword(s: str) -> str:
@@ -111,6 +122,36 @@ async def upsert_trigger_from_message(
     )
     session.add(tr)
     return tr
+
+
+def format_trigger_for_bitrix(trigger: TriggerReply) -> str:
+    """
+    Текст авто-ответа для таймлайна сделки: менеджер должен видеть,
+    что именно бот отправил клиенту по ключевому слову.
+    """
+    payload = trigger.payload or {}
+
+    parts: list[str] = [f"🤖 Авто-ответ бота по триггеру «{trigger.keyword}»"]
+    if trigger.title:
+        parts.append(f"Название: {trigger.title}")
+    parts.append("")
+
+    if trigger.text:
+        parts.append(trigger.text)
+
+    if trigger.content_type != "text":
+        label = _CONTENT_TYPE_LABELS.get(trigger.content_type, trigger.content_type)
+        media = f"[{label}]"
+        if payload.get("file_name"):
+            media += f" {payload['file_name']}"
+        if payload.get("file_id"):
+            media += f" file_id={payload['file_id']}"
+        parts.append(media)
+
+    if not trigger.text and trigger.content_type == "text":
+        parts.append("<пусто>")
+
+    return truncate_for_bitrix("\n".join(parts))
 
 
 async def send_trigger_reply(bot: Bot, chat_id: int, trigger: TriggerReply) -> None:

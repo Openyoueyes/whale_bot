@@ -1,18 +1,21 @@
 # app/bot/routers/client/prem.py
 from __future__ import annotations
 
+import logging
+
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 
 from app.bot.keyboards.prem import get_prem_list_keyboard, get_prem_post_apply_keyboard
-from app.bot.keyboards.robots import get_robot_post_apply_keyboard
 from app.bot.routers.client.robots import safe_edit_text_or_caption, safe_callback_answer
 from app.config import PREM_IMAGE_FILE_ID
 from app.integrations.bitrix.client import BitrixClient
 from app.services.auto_followup_service import mark_activity
 from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
-from app.services.prem_service import create_prem_request
+from app.services.request_service import create_prem_request
+
+logger = logging.getLogger(__name__)
 
 router = Router(name="client-prem")
 bitrix_client = BitrixClient()
@@ -52,12 +55,9 @@ async def team_entry(message: Message):
         )
 
 
-TEAM_LIST_VIDEO_FILE_ID = None
-
-
 @router.callback_query(F.data == "prem:apply")
-async def team_anton_apply(callback: CallbackQuery):
-    await callback.answer()
+async def prem_apply(callback: CallbackQuery):
+    await safe_callback_answer(callback)
 
     await create_prem_request(
         bot=callback.bot,
@@ -68,19 +68,22 @@ async def team_anton_apply(callback: CallbackQuery):
     try:
         await mark_activity(callback.from_user.id)
     except Exception:
-        pass
-    # ✅ реакция на заявку: если клиент был в “плохих” стадиях — перекидываем в “1 касание”
+        logger.warning("Не удалось отметить активность tg_id=%s", callback.from_user.id)
+
+    # Заявка — это активность: возвращаем «мёртвую» сделку в работу.
     try:
         await move_to_first_touch_if_needed(bitrix_client, callback.from_user.id)
     except Exception:
-        pass
+        logger.warning("Stage guard не отработал для tg_id=%s", callback.from_user.id)
+
     await safe_edit_text_or_caption(
         callback,
         text=(
             "✅✅✅ <b>Заявка принята</b>\n\n"
-            "📩 Менеджер свяжется с вами в ближайшее время и расскажет подробнее про формат сотрудничества.\n\n"
-
+            "📩 Менеджер свяжется с вами в ближайшее время "
+            "и расскажет подробнее про формат сотрудничества."
         ),
+        reply_markup=get_prem_post_apply_keyboard(),
         parse_mode="HTML",
     )
 
@@ -115,7 +118,7 @@ async def products_back(callback: CallbackQuery):
     else:
         await safe_edit_text_or_caption(
             callback,
-            text=PREM_IMAGE_FILE_ID,
+            text=PREM_LIST_TEXT,
             reply_markup=get_prem_list_keyboard(),
             parse_mode="HTML",
         )

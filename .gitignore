@@ -1,13 +1,33 @@
 ### macOS ###
-# General
 .DS_Store
 .AppleDouble
 .LSOverride
+
+### IDE ###
+/.idea/
+/.idea/*
+/idea
+.vscode/
+
+### Python ###
 venv
 /venv
-/idea
-/.idea/
+.venv
 __pycache__/
-/.idea/*
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+### Секреты ###
+# Любые файлы с переменными окружения. Единственный источник значений —
+# локальный .env, который в репозиторий не попадает никогда.
 .env
-bot_logs.log
+.env.*
+*.env
+env_old
+!.env.example
+
+### Логи ###
+logs/
+*.log

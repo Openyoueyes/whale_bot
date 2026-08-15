@@ -341,7 +341,7 @@ async def handle_broadcast_message(message: Message, state: FSMContext):
     try:
         recipients = await collect_recipients(scope, category_id=category_id, stage_id=stage_id)
     except Exception:
-        recipients = []
+        recipients = {}
 
     if not recipients:
         await state.clear()

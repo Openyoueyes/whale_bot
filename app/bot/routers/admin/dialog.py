@@ -14,7 +14,6 @@ from aiogram.fsm.context import FSMContext
 from app.bot.filters.admin import AdminFilter
 from app.bot.keyboards.common import cancel_inline_kb
 from app.integrations.bitrix.client import BitrixClient
-from app.services.dialog_service import _format_message_for_bitrix
 
 router = Router(name="admin-dialog")
 

@@ -35,7 +35,14 @@ services:
         condition: service_completed_successfully
     env_file:
       - .env
-    command: ["python", "-m", "app.bot.main"]
+    # Логи держим на хосте: иначе они уезжают вместе с контейнером.
+    volumes:
+      - ./logs:/app/logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   db_data:

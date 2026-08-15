@@ -13,6 +13,7 @@ from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
 from app.services.business_service import ensure_deal_id_for_private_chat
 from app.integrations.bitrix.client import BitrixClient
 from app.config import GROUP_CHAT_MESSAGES_BOT_ID, GROUP__B_CHAT_MESSAGES_BOT_ID
+from app.services.message_formatters import format_message_for_bitrix
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ bitrix = BitrixClient()
 # ======== CACHE business connection status ========
 # bc_id -> { manager_user_id: int, is_enabled: bool, can_reply: bool }
 _BC_CACHE: Dict[str, Dict[str, Any]] = {}
+_BC_CACHE_MAX = 200
 
 
 def _is_private_chat(message: Message) -> bool:
@@ -60,6 +62,10 @@ async def _upsert_bc(bc: BusinessConnection) -> None:
     rights = getattr(bc, "rights", None)
     can_reply = getattr(rights, "can_reply", None) if rights else None
 
+    # Менеджеров немного, но подключения пересоздаются — не даём кэшу расти вечно.
+    if len(_BC_CACHE) >= _BC_CACHE_MAX and bc.id not in _BC_CACHE:
+        _BC_CACHE.clear()
+
     _BC_CACHE[bc.id] = {
         "manager_user_id": bc.user.id,
         "is_enabled": bool(bc.is_enabled),
@@ -84,29 +90,6 @@ async def _ensure_bc_cached(bot, bc_id: Optional[str]) -> Optional[Dict[str, Any
     except Exception as e:
         logger.exception("get_business_connection failed (bc_id=%s): %s", bc_id, e)
         return None
-
-
-def _format_message_for_bitrix(message: Message) -> str:
-    text = message.html_text or message.text or message.caption or ""
-    parts = []
-    if text:
-        parts.append(text)
-
-    # фиксируем вложения (минимально, как у вас)
-    if message.photo:
-        parts.append(f"[photo] file_id={message.photo[-1].file_id}")
-    if message.video:
-        parts.append(f"[video] file_id={message.video.file_id}")
-    if message.document:
-        parts.append(f"[document] {message.document.file_name or ''} file_id={message.document.file_id}")
-    if message.voice:
-        parts.append(f"[voice] file_id={message.voice.file_id}")
-    if message.audio:
-        parts.append(f"[audio] file_id={message.audio.file_id}")
-    if message.sticker:
-        parts.append(f"[sticker] file_id={message.sticker.file_id}")
-
-    return "\n".join(parts).strip() or "<без текста>"
 
 
 # ========= УВЕДОМЛЕНИЯ О ВКЛ/ВЫКЛ БИЗНЕС-СВЯЗИ =========
@@ -182,7 +165,7 @@ async def on_business_message(message: Message, bot):
             await move_to_first_touch_if_needed(bitrix=bitrix, tg_id=client_id)
         except Exception:
             logger.exception("Business: stage guard failed client_id=%s", client_id)
-    body = _format_message_for_bitrix(message)
+    body = format_message_for_bitrix(message)
 
     comment = (
         f"{direction}{manager_suffix} (Telegram Business):\n\n"

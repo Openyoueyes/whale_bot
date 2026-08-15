@@ -33,7 +33,8 @@ def format_message_for_log(message: Message) -> str:
 _BITRIX_COMMENT_MAX = 3500
 
 
-def _truncate(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
+def truncate_for_bitrix(text: str, limit: int = _BITRIX_COMMENT_MAX) -> str:
+    """Комментарий в таймлайн не должен превышать безопасный лимит Bitrix."""
     t = (text or "").strip()
     if len(t) <= limit:
         return t
@@ -67,4 +68,4 @@ def format_message_for_bitrix(message: Message) -> str:
         parts.append(f"[sticker] file_id={message.sticker.file_id}")
 
     out = "\n".join([p for p in parts if p]).strip() or "<без текста>"
-    return _truncate(out)
+    return truncate_for_bitrix(out)

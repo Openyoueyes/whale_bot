@@ -23,7 +23,9 @@ from app.services.subscription_service import (
     send_subscription_gate_callback,
     send_subscription_gate_message,
 )
+from app.services.bitrix_presenter import comment_safe
 from app.services.triggers_service import (
+    format_trigger_for_bitrix,
     get_trigger_by_keyword,
     normalize_keyword,
     send_trigger_reply,
@@ -147,9 +149,9 @@ async def cmd_start(message: Message, command: CommandObject):
             tg_user = await get_or_create_tg_user(session, from_user)
             tag_value, is_first_visit = await process_referral_tag_for_user(session, tg_user, start_tag)
             await session.commit()
-            logger.warning("TG_USER_OK tg_id=%s db_id=%s", from_user.id, tg_user.id)
+            logger.info("Пользователь сохранён: tg_id=%s db_id=%s", from_user.id, tg_user.id)
         except Exception:
-            logger.exception("TG_USER_FAIL tg_id=%s", from_user.id)
+            logger.exception("Не удалось сохранить пользователя tg_id=%s", from_user.id)
             await session.rollback()
             raise
 
@@ -218,6 +220,18 @@ def _trigger_key_from_message(message: Message) -> str:
     return normalize_keyword(raw)
 
 
+async def _find_enabled_trigger(message: Message):
+    """Активный триггер по тексту/подписи сообщения, иначе None."""
+    key = _trigger_key_from_message(message)
+    if not key:
+        return None
+
+    async with async_session_maker() as session:
+        trigger = await get_trigger_by_keyword(session, key)
+
+    return trigger if (trigger and trigger.is_enabled) else None
+
+
 @router.message(
     # НЕ команды
     ~F.text.startswith("/"),
@@ -226,24 +240,33 @@ def _trigger_key_from_message(message: Message) -> str:
     # НЕ перехватывать контакты/тест-флоу
     ~F.contact,
 )
-async def any_client_message(message: Message):
+async def any_client_message(message: Message, bitrix_deal: dict | None = None):
+    """
+    bitrix_deal приходит из BitrixStageGuardMiddleware — сделка уже загружена,
+    повторно спрашивать её у Bitrix не нужно.
+    """
+    tg_id = message.from_user.id
+
     try:
-        await mark_activity(message.from_user.id)
+        await mark_activity(tg_id)
     except Exception:
-        pass
+        logger.warning("Не удалось отметить активность tg_id=%s", tg_id)
 
-    # триггеры
+    # 1) Сначала отвечаем клиенту: он не должен ждать похода в Bitrix.
+    trigger = None
+    trigger_sent = False
     try:
-        key = _trigger_key_from_message(message)
-        if key:
-            async with async_session_maker() as session:
-                trigger = await get_trigger_by_keyword(session, key)
-
-            if trigger and trigger.is_enabled:
-                await send_trigger_reply(message.bot, message.chat.id, trigger)
-                # если НЕ надо дальше в Bitrix — раскомментируйте:
-                # return
+        trigger = await _find_enabled_trigger(message)
+        if trigger:
+            await send_trigger_reply(message.bot, message.chat.id, trigger)
+            trigger_sent = True
     except Exception:
-        pass
+        logger.exception("Ошибка обработки триггера tg_id=%s", tg_id)
 
-    await process_client_message(message.bot, message)
+    # 2) Входящее сообщение клиента в таймлайн + карточка менеджерам.
+    card = await process_client_message(message.bot, message, deal=bitrix_deal)
+
+    # 3) Наш авто-ответ — отдельным комментарием ПОСЛЕ входящего,
+    #    иначе в таймлайне ответ окажется раньше вопроса.
+    if trigger_sent and trigger is not None:
+        await comment_safe(card.deal_id, format_trigger_for_bitrix(trigger))

@@ -3,73 +3,109 @@
 import asyncio
 import logging
 from contextlib import suppress
-from typing import Any
+from typing import Any, Awaitable, Callable
 
-from aiogram import Bot, Dispatcher, BaseMiddleware
+from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import Message
+from aiogram.types import Message, TelegramObject
 
-from app.config import BOT_TOKEN
 from app.bot.routers import setup_routers
+from app.config import BOT_TOKEN, DEBUG_LOG_INCOMING
+from app.db.session import engine
+from app.integrations.bitrix.client import BitrixClient
 from app.logging_config import setup_logging
-from app.services.auto_followup_service import worker_autoping_1, worker_autoping_2, worker_autolose
-
-# ✅ воркеры (подставь свой реальный путь/имена функций)
-
+from app.services.auto_followup_service import worker_first_ping, worker_followup_after_first
 
 logger = logging.getLogger(__name__)
 
 _worker_tasks: list[asyncio.Task[Any]] = []
 
+# Пауза перед перезапуском упавшего воркера.
+_WORKER_RESTART_DELAY = 30
 
-# ===================== DEBUG MIDDLEWARE =====================
 
 class DebugIncomingMiddleware(BaseMiddleware):
-    async def __call__(self, handler, event, data):
+    """
+    Пишет в лог каждое входящее сообщение целиком.
+    Включается только через DEBUG_LOG_INCOMING=true: в логи попадает
+    переписка клиентов, держать это включённым постоянно не стоит.
+    """
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
         if isinstance(event, Message):
-            logger.warning(
-                "INCOMING MESSAGE | chat_id=%s user_id=%s text=%r caption=%r entities=%r",
+            logger.debug(
+                "INCOMING MESSAGE | chat_id=%s user_id=%s text=%r caption=%r",
                 getattr(event.chat, "id", None),
                 getattr(event.from_user, "id", None),
                 event.text,
                 event.caption,
-                event.entities,
             )
         return await handler(event, data)
 
 
+# ===================== WORKERS =====================
+
+
+async def _supervise(name: str, coro_factory: Callable[[], Awaitable[None]]) -> None:
+    """
+    Держит фоновый воркер живым: если он падает с необработанной ошибкой,
+    логируем и перезапускаем, а не теряем молча до следующего рестарта бота.
+    """
+    while True:
+        try:
+            await coro_factory()
+            logger.warning("Воркер %s завершился сам, перезапускаю", name)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Воркер %s упал, перезапуск через %s с", name, _WORKER_RESTART_DELAY)
+        await asyncio.sleep(_WORKER_RESTART_DELAY)
+
+
 # ===================== LIFECYCLE =====================
+
 
 async def on_startup(bot: Bot):
     me = await bot.get_me()
     logger.info("Бот запущен. Логин: @%s, id=%s", me.username, me.id)
 
-    # ✅ запускаем воркеры (бесконечные циклы) как фоновые задачи
+    workers: list[tuple[str, Callable[[], Awaitable[None]]]] = [
+        ("worker_first_ping", lambda: worker_first_ping(bot)),
+        ("worker_followup_after_first", lambda: worker_followup_after_first(bot)),
+    ]
+
     _worker_tasks.clear()
     _worker_tasks.extend(
-        [
-            asyncio.create_task(worker_autoping_1(bot), name="worker_autoping_1"),
-            asyncio.create_task(worker_autoping_2(bot), name="worker_autoping_2"),
-            asyncio.create_task(worker_autolose(bot), name="worker_autolose"),
-        ]
+        asyncio.create_task(_supervise(name, factory), name=name) for name, factory in workers
     )
 
 
 async def on_shutdown(bot: Bot):
     logger.info("Остановка: отменяю воркеры...")
 
-    for t in _worker_tasks:
-        t.cancel()
+    for task in _worker_tasks:
+        task.cancel()
 
-    for t in _worker_tasks:
+    for task in _worker_tasks:
         with suppress(asyncio.CancelledError):
-            await t
+            await task
+
+    _worker_tasks.clear()
+
+    await BitrixClient.close()
+    await engine.dispose()
 
     logger.info("Бот остановлен.")
 
 
 # ===================== MAIN =====================
+
 
 async def main():
     setup_logging()
@@ -82,10 +118,10 @@ async def main():
 
     dp = Dispatcher()
 
-    # 🔥 ВАЖНО: middleware ДО роутеров
-    dp.message.middleware(DebugIncomingMiddleware())
+    if DEBUG_LOG_INCOMING:
+        logger.warning("DEBUG_LOG_INCOMING включён: в логи попадёт текст переписки клиентов")
+        dp.message.middleware(DebugIncomingMiddleware())
 
-    # хуки старта/остановки
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 

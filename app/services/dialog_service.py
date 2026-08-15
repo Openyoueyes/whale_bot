@@ -2,166 +2,91 @@
 
 from __future__ import annotations
 
+import logging
+from typing import Any, Dict, Optional
+
 from aiogram import Bot
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message
 
+from app.bot.keyboards.dialog import reply_to_client_kb
 from app.config import ADMIN_IDS, GROUP_CHAT_MESSAGES_BOT_ID
-from app.integrations.bitrix.client import BitrixClient
+from app.services.bitrix_presenter import DealCard, build_deal_card, comment_safe, load_deal_card
+from app.services.message_formatters import format_message_for_bitrix
 
-bitrix_client = BitrixClient()
-
-
-def _reply_kb(tg_id: int, deal_id: str | None) -> InlineKeyboardMarkup:
-    deal_part = deal_id if deal_id else "no_deal"
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="✉️ Ответить клиенту", callback_data=f"reply_to_client:{tg_id}:{deal_part}")]
-        ]
-    )
+logger = logging.getLogger(__name__)
 
 
-def _format_message_for_bitrix(message: Message) -> str:
-    """
-    Универсальный “дамп” сообщения: текст/caption + вложения.
-    """
-    text = message.text or message.caption or ""
-    parts: list[str] = []
-
-    if text:
-        parts.append(text)
-
-    if message.photo:
-        parts.append(f"[photo] file_id={message.photo[-1].file_id}")
-    if message.video:
-        parts.append(f"[video] file_id={message.video.file_id}")
-    if message.document:
-        parts.append(f"[document] {message.document.file_name or ''} file_id={message.document.file_id}")
-    if message.voice:
-        parts.append(f"[voice] file_id={message.voice.file_id}")
-    if message.audio:
-        parts.append(f"[audio] file_id={message.audio.file_id}")
-    if message.sticker:
-        parts.append(f"[sticker] file_id={message.sticker.file_id}")
-    if message.animation:
-        parts.append(f"[animation] file_id={message.animation.file_id}")
-
-    return "\n".join(parts).strip() or "<без текста>"
-
-
-async def process_client_message(bot: Bot, message: Message) -> None:
+async def process_client_message(
+    bot: Bot,
+    message: Message,
+    *,
+    deal: Optional[Dict[str, Any]] = None,
+) -> DealCard:
     """
     Любое сообщение клиента (текст/фото/видео/голос/файл/...):
-    - ищем сделку
-    - пишем в таймлайн сделки
-    - шлём админам "карточку" + копируем оригинал сообщения
+    - находим сделку,
+    - пишем в таймлайн,
+    - шлём менеджерам карточку + копию оригинала.
+
+    deal — уже загруженная сделка (её отдаёт BitrixStageGuardMiddleware),
+    чтобы не спрашивать Bitrix дважды на одно сообщение.
+
+    Возвращает карточку сделки: вызывающий код дописывает в тот же таймлайн
+    (например, авто-ответ по триггеру) без повторного поиска сделки.
     """
     from_user = message.from_user
     if not from_user:
-        return
+        return DealCard()
 
     tg_id = from_user.id
 
-    # 1) ищем сделку
-    deal = None
-    try:
-        deal = await bitrix_client.find_deal_for_telegram_user(tg_id)
-    except Exception:
-        deal = None
+    card = await build_deal_card(deal) if deal else await load_deal_card(tg_id)
 
-    deal_id: str | None = str(deal["ID"]) if deal else None
-    tag_value: str | None = str(deal["UF_CRM_1745855127"]) if deal else None
-    deal_link_text = "Сделка не найдена"
-    responsible_text = "не назначен"
+    await comment_safe(
+        card.deal_id,
+        "Сообщение от клиента из Telegram бота:\n\n" f"{format_message_for_bitrix(message)}",
+    )
 
-    if deal_id:
-        deal_link = bitrix_client.make_deal_link(deal_id)
-        deal_link_text = f'<a href="{deal_link}">Перейти в сделку</a>'
-
-        # получаем ответственного
-        try:
-            full_deal = await bitrix_client.get_deal(deal_id)
-            assigned_id = full_deal.get("ASSIGNED_BY_ID")
-
-            if assigned_id:
-                user_data = await bitrix_client.get_user(assigned_id)
-                first = (user_data.get("NAME") or "").strip()
-                last = (user_data.get("LAST_NAME") or "").strip()
-                login = (user_data.get("LOGIN") or "").strip()
-                full_name = (first + " " + last).strip()
-                responsible_text = full_name or login or str(assigned_id)
-
-        except Exception:
-            responsible_text = "не назначен"
-
-    # 2) Bitrix: логируем содержимое
-    if deal_id:
-        body = _format_message_for_bitrix(message)
-        comment_text = (
-            "Сообщение от клиента из Telegram бота:\n\n"
-            f"{body}"
-        )
-        try:
-            await bitrix_client.add_deal_timeline_comment(deal_id, comment_text)
-        except Exception:
-            pass
-
-    kb = _reply_kb(tg_id=tg_id, deal_id=deal_id)
-
-    # 3) Карточка для админов
     admin_card = (
         "Новое сообщение от клиента\n"
         "----------------------------------------\n"
-        f"{deal_link_text}\n"
+        f"{card.link_text}\n"
         "----------------------------------------\n"
-        f"Тег: {tag_value or 'нет тега'}\n"
-        f"Ответственный: {responsible_text}\n"
+        f"Тег: {card.tag_text}\n"
+        f"Ответственный: {card.responsible}\n"
         f"TG ID: <code>{tg_id}</code>\n"
         f"Username: @{from_user.username or 'нет'}\n"
         f"Имя: {from_user.full_name}\n"
         "👇"
     )
 
-    # 4) Админам
-    for admin_id in ADMIN_IDS:
+    kb = reply_to_client_kb(tg_id, card.deal_id)
+
+    # Менеджерам: карточка + копия исходного сообщения (чтобы видеть медиа как есть).
+    targets: list[tuple[int, bool]] = [(admin_id, True) for admin_id in ADMIN_IDS]
+    if GROUP_CHAT_MESSAGES_BOT_ID:
+        targets.append((GROUP_CHAT_MESSAGES_BOT_ID, False))
+
+    for chat_id, with_kb in targets:
         try:
             await bot.send_message(
-                admin_id,
+                chat_id,
                 admin_card,
-                reply_markup=kb,
+                reply_markup=kb if with_kb else None,
                 parse_mode="HTML",
                 disable_web_page_preview=True,
             )
-
             await bot.copy_message(
-                chat_id=admin_id,
+                chat_id=chat_id,
                 from_chat_id=message.chat.id,
                 message_id=message.message_id,
             )
-
         except Exception:
-            continue
+            logger.warning("Не удалось переслать сообщение клиента в чат %s", chat_id)
 
-    # 5) Клиенту подтверждение
     try:
         await message.answer("Сообщение передано, ожидайте ответ менеджера.")
     except Exception:
-        pass
+        logger.warning("Не удалось подтвердить приём сообщения клиенту %s", tg_id)
 
-    # 6) В группу
-    if GROUP_CHAT_MESSAGES_BOT_ID:
-        try:
-            await bot.send_message(
-                GROUP_CHAT_MESSAGES_BOT_ID,
-                admin_card,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
-
-            await bot.copy_message(
-                chat_id=GROUP_CHAT_MESSAGES_BOT_ID,
-                from_chat_id=message.chat.id,
-                message_id=message.message_id,
-            )
-
-        except Exception:
-            pass
+    return card

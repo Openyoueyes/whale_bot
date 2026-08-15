@@ -1,6 +1,8 @@
 # app/bot/routers/client/robots.py
 from __future__ import annotations
 
+import logging
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
@@ -9,8 +11,10 @@ from app.bot.keyboards.robots import get_robot_list_keyboard, get_robot_detail_k
 from app.config import BREAKOUTGOLD_IMAGE_FILE_ID, ROBOTS_IMAGE_FILE_ID, AI_IMAGE_FILE_ID
 from app.integrations.bitrix.client import BitrixClient
 from app.services.auto_followup_service import mark_activity
-from app.services.robots_service import create_product_request
+from app.services.request_service import create_product_request
 from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
+
+logger = logging.getLogger(__name__)
 
 bitrix_client = BitrixClient()
 router = Router(name="client-robots")
@@ -19,12 +23,17 @@ router = Router(name="client-robots")
 # ---------- helpers ----------
 
 async def safe_callback_answer(callback: CallbackQuery, text: str | None = None) -> None:
+    """
+    Ответ на callback — необязательная вежливость (убрать «часики» на кнопке).
+    Протухший callback или сетевой сбой не должны ронять обработчик, поэтому
+    глушим любые ошибки: основная работа делается дальше по коду.
+    """
     try:
         await callback.answer(text=text)
     except (TelegramBadRequest, TelegramNetworkError):
         pass
     except Exception:
-        pass
+        logger.debug("callback.answer не прошёл", exc_info=True)
 
 
 async def safe_edit_text_or_caption(
@@ -61,15 +70,24 @@ async def safe_edit_text_or_caption(
         )
     except TelegramBadRequest:
         # Частый кейс: "there is no text in the message to edit"
-        try:
-            await callback.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
-        except Exception:
-            pass
+        await _fallback_answer(callback, text, reply_markup, parse_mode)
     except Exception:
-        try:
-            await callback.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
-        except Exception:
-            pass
+        await _fallback_answer(callback, text, reply_markup, parse_mode)
+
+
+async def _fallback_answer(callback: CallbackQuery, text: str, reply_markup, parse_mode: str) -> None:
+    """
+    Последний рубеж: отправляем новым сообщением.
+    Молчать здесь нельзя — именно это скрывало баг с пустым текстом.
+    """
+    try:
+        await callback.message.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    except Exception:
+        logger.exception(
+            "Не удалось показать экран клиенту tg_id=%s (длина текста=%s)",
+            callback.from_user.id if callback.from_user else None,
+            len(text or ""),
+        )
 
 
 # ---------- texts ----------
@@ -252,12 +270,13 @@ async def robots_ai_apply(callback: CallbackQuery):
     try:
         await mark_activity(callback.from_user.id)
     except Exception:
-        pass
-    # ✅ реакция на заявку: если клиент был в “плохих” стадиях — перекидываем в “1 касание”
+        logger.warning("Не удалось отметить активность tg_id=%s", callback.from_user.id)
+
+    # Заявка — это активность: возвращаем «мёртвую» сделку в работу.
     try:
         await move_to_first_touch_if_needed(bitrix_client, callback.from_user.id)
     except Exception:
-        pass
+        logger.warning("Stage guard не отработал для tg_id=%s", callback.from_user.id)
 
     await safe_edit_text_or_caption(
         callback,
@@ -284,12 +303,13 @@ async def robots_breakoutgold_apply(callback: CallbackQuery):
     try:
         await mark_activity(callback.from_user.id)
     except Exception:
-        pass
-    # ✅ реакция на заявку: если клиент был в “плохих” стадиях — перекидываем в “1 касание”
+        logger.warning("Не удалось отметить активность tg_id=%s", callback.from_user.id)
+
+    # Заявка — это активность: возвращаем «мёртвую» сделку в работу.
     try:
         await move_to_first_touch_if_needed(bitrix_client, callback.from_user.id)
     except Exception:
-        pass
+        logger.warning("Stage guard не отработал для tg_id=%s", callback.from_user.id)
     await safe_edit_text_or_caption(
         callback,
         text=(
