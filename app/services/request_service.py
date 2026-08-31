@@ -85,3 +85,17 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
         notify_title="🆕 <b>Новая заявка (Роботы)</b>",
         comment_title="Заявка из Telegram бота (Роботы)",
     )
+
+
+async def create_prem_robo_request(bot: Bot, tg_user: User, source: str) -> None:
+    """
+    Заявка по синей кнопке «ПОЛУЧИТЬ PREM/ROBO» из Telegram-канала
+    (deep-link вида t.me/<bot>?start=prem_robo).
+    """
+    await create_client_request(
+        bot,
+        tg_user,
+        source=source,
+        notify_title="🔥 <b>Новая заявка PREM/ROBO (кнопка в канале)</b>",
+        comment_title="Заявка PREM/ROBO по кнопке из Telegram-канала",
+    )

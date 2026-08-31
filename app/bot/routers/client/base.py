@@ -24,6 +24,9 @@ from app.services.subscription_service import (
     send_subscription_gate_message,
 )
 from app.services.bitrix_presenter import comment_safe
+from app.services.bitrix_stage_guard import move_to_first_touch_if_needed
+from app.integrations.bitrix.client import BitrixClient
+from app.services.request_service import create_prem_robo_request
 from app.services.triggers_service import (
     format_trigger_for_bitrix,
     get_trigger_by_keyword,
@@ -36,6 +39,17 @@ from app.services.user_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+bitrix_client = BitrixClient()
+
+# Синяя кнопка в канале ведёт на t.me/<bot>?start=prem_robo.
+# Payload одновременно работает как реф-метка: он уезжает в тег лида/сделки.
+PREM_ROBO_PAYLOAD = "prem_robo"
+
+PREM_ROBO_REPLY_TEXT = (
+    "Спасибо, за интерес к нашим продуктам, "
+    "мы вышлем вам информацию в ближайшее время"
+)
 
 MAIN_MENU_TEXTS = {
     "💰 Whale Профит",
@@ -128,6 +142,41 @@ async def _send_welcome_flow_to_callback_chat(callback: CallbackQuery) -> None:
     )
 
 
+async def _handle_prem_robo_start(message: Message) -> None:
+    """
+    Клиент пришёл по кнопке «ПОЛУЧИТЬ PREM/ROBO» из канала.
+
+    Сначала отвечаем ему, потом фиксируем заявку в CRM и уведомляем менеджеров:
+    клиент не должен ждать, пока мы сходим в Bitrix.
+    """
+    tg_id = message.from_user.id
+
+    try:
+        await message.answer(PREM_ROBO_REPLY_TEXT)
+    except Exception:
+        logger.warning("Не удалось ответить на заявку PREM/ROBO tg_id=%s", tg_id)
+
+    # Заявка — это активность: авто-прозвон такому клиенту не нужен.
+    try:
+        await mark_activity(tg_id)
+    except Exception:
+        logger.warning("Не удалось отметить активность tg_id=%s", tg_id)
+
+    try:
+        await move_to_first_touch_if_needed(bitrix_client, tg_id)
+    except Exception:
+        logger.warning("Stage guard не отработал для tg_id=%s", tg_id)
+
+    try:
+        await create_prem_robo_request(
+            bot=message.bot,
+            tg_user=message.from_user,
+            source="Telegram-канал / Кнопка «ПОЛУЧИТЬ PREM/ROBO»",
+        )
+    except Exception:
+        logger.exception("Не удалось оформить заявку PREM/ROBO tg_id=%s", tg_id)
+
+
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject):
     from_user = message.from_user
@@ -168,9 +217,14 @@ async def cmd_start(message: Message, command: CommandObject):
     try:
         await mark_start(from_user.id, deal_id)
     except Exception:
-        pass
+        logger.warning("Не удалось отметить старт tg_id=%s", from_user.id)
 
-    # 4) Доступ к боту только после подписки
+    # 4) Заявка по кнопке из канала — до гейта подписки,
+    #    иначе интерес клиента потеряется, если он ещё не подписан.
+    if start_tag.lower() == PREM_ROBO_PAYLOAD:
+        await _handle_prem_robo_start(message)
+
+    # 5) Доступ к боту только после подписки
     if not await has_subscription_access(message.bot, from_user.id):
         await send_subscription_gate_message(message, with_photo=True)
         schedule_subscription_gate_reminder(
