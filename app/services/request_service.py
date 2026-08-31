@@ -87,15 +87,33 @@ async def create_product_request(bot: Bot, tg_user: User, source: str) -> None:
     )
 
 
-async def create_prem_robo_request(bot: Bot, tg_user: User, source: str) -> None:
+async def create_channel_click_request(bot: Bot, tg_user: User, source: str) -> None:
     """
-    Заявка по синей кнопке «ПОЛУЧИТЬ PREM/ROBO» из Telegram-канала
-    (deep-link вида t.me/<bot>?start=prem_robo).
+    Клиент перешёл по кнопке «ПОЛУЧИТЬ» из Telegram-канала
+    (deep-link вида t.me/<bot>?start=prem_robo) и увидел меню продуктов.
+    Сам выбор продукта фиксируется отдельно, см. create_product_choice_request.
     """
     await create_client_request(
         bot,
         tg_user,
         source=source,
-        notify_title="🔥 <b>Новая заявка PREM/ROBO (кнопка в канале)</b>",
-        comment_title="Заявка PREM/ROBO по кнопке из Telegram-канала",
+        notify_title="🐋 <b>Переход из канала</b> — показано меню продуктов",
+        comment_title="Переход из Telegram-канала по кнопке «ПОЛУЧИТЬ»",
+    )
+
+
+async def create_product_choice_request(
+    bot: Bot,
+    tg_user: User,
+    *,
+    product_name: str,
+    source: str,
+) -> None:
+    """Клиент выбрал конкретный продукт в меню после перехода из канала."""
+    await create_client_request(
+        bot,
+        tg_user,
+        source=source,
+        notify_title=f"🔥 <b>Новая заявка: {product_name}</b>",
+        comment_title=f"Заявка из Telegram-канала — продукт: {product_name}",
     )

@@ -16,6 +16,7 @@ from app.bot.routers.client.base import router as client_base_router
 from app.bot.routers.client.bonus import router as client_bonus_router
 from app.bot.routers.client.manager import router as client_manager_router
 from app.bot.routers.client.prem import router as client_prem_router
+from app.bot.routers.client.products import router as client_products_router
 from app.bot.routers.client.quiz import router as quiz_router
 from app.bot.routers.client.robots import router as client_robots_router
 from app.bot.routers.common.cancel import router as common_cancel_router
@@ -27,6 +28,7 @@ CLIENT_ROUTERS: tuple[Router, ...] = (
     client_robots_router,
     client_bonus_router,
     client_manager_router,
+    client_products_router,
     quiz_router,
 )
 
@@ -69,6 +71,7 @@ def setup_routers(dp: Dispatcher) -> None:
     dp.include_router(client_robots_router)
     dp.include_router(client_bonus_router)
     dp.include_router(client_manager_router)
+    dp.include_router(client_products_router)
 
     # Business-диалоги и квиз
     dp.include_router(business_dialog_router)
